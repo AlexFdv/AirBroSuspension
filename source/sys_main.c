@@ -86,10 +86,30 @@ void vSomeTask1( void *pvParameters )
 {
     for( ;; )
     {
-        vTaskDelay( 500 / portTICK_RATE_MS);
+
         openPin(FORWARD_LEFT_UP_PIN);
-        vTaskDelay( 500 / portTICK_RATE_MS);
+        openPin(FORWARD_LEFT_DOWN_PIN);
+        openPin(FORWARD_RIGHT_UP_PIN);
+        openPin(FORWARD_RIGHT_DOWN_PIN);
+
+        openPin(BACK_LEFT_UP_PIN);
+        openPin(BACK_LEFT_DOWN_PIN);
+        openPin(FORWARD_LEFT_UP_PIN);
+        openPin(FORWARD_LEFT_UP_PIN);
+
+        vTaskDelay( 10000 / portTICK_RATE_MS);
+
         closePin(FORWARD_LEFT_UP_PIN);
+        closePin(FORWARD_LEFT_DOWN_PIN);
+        closePin(FORWARD_RIGHT_UP_PIN);
+        closePin(FORWARD_RIGHT_DOWN_PIN);
+
+        closePin(BACK_LEFT_UP_PIN);
+        closePin(BACK_LEFT_DOWN_PIN);
+        closePin(FORWARD_LEFT_UP_PIN);
+        closePin(FORWARD_LEFT_UP_PIN);
+
+        vTaskDelay( 10000 / portTICK_RATE_MS);
     }
     vTaskDelete( NULL );
 }
@@ -106,7 +126,7 @@ int main(void)
 
     portBASE_TYPE result = pdFALSE;
 
-    result = xTaskCreate(vSomeTask, "BlinkTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    //result = xTaskCreate(vSomeTask, "BlinkTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
     result = xTaskCreate(vSomeTask1, "BlinkTask1", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
 
     vTaskStartScheduler();
