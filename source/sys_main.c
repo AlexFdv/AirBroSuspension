@@ -53,11 +53,21 @@
 #include "gio.h"
 #include "het.h"
 #include "HetPinsController.h"
+#include "SerialController.h"
+#include "sci.h"
 
 #include "FreeRTOS.h"
 #include "os_task.h"
 
 #include "HetConstants.h"
+
+// serial communication interface
+
+#define TSIZE1 12
+const uint32 TEXT1[TSIZE1] = { '\r', '\n', '|', '\t', 'C', 'H', '.', 'I', 'D', '=',
+                        '0', 'x' };
+#define TSIZE2 9
+const uint32 TEXT2[TSIZE2] = { '\t', 'V', 'A', 'L', 'U', 'E', '=', '0', 'x' };
 /* USER CODE END */
 
 /** @fn void main(void)
@@ -70,14 +80,17 @@
 
 /* USER CODE BEGIN (2) */
 
+#define LEN 10
 void vSomeTask( void *pvParameters )
 {
     for( ;; )
     {
-        vTaskDelay( 500 / portTICK_RATE_MS);
-        openPin(FORWARD_LEFT_DOWN_PIN);
-        vTaskDelay( 500 / portTICK_RATE_MS);
-        closePin(FORWARD_LEFT_DOWN_PIN);
+        uint32 recevedArr[LEN] = {'\0'};
+        uint32 receivedLen = 0;
+        if (sciReceiveText(recevedArr, LEN, &receivedLen))
+        {
+            sciDisplayText(recevedArr, receivedLen);
+        }
     }
     vTaskDelete( NULL );
 }
@@ -94,10 +107,12 @@ void vSomeTask1( void *pvParameters )
 
         openPin(BACK_LEFT_UP_PIN);
         openPin(BACK_LEFT_DOWN_PIN);
-        openPin(FORWARD_LEFT_UP_PIN);
-        openPin(FORWARD_LEFT_UP_PIN);
+        openPin(BACK_RIGHT_UP_PIN);
+        openPin(BACK_RIGHT_DOWN_PIN);
 
         vTaskDelay( 10000 / portTICK_RATE_MS);
+
+        //sciDisplayText(TEXT2, TSIZE2);
 
         closePin(FORWARD_LEFT_UP_PIN);
         closePin(FORWARD_LEFT_DOWN_PIN);
@@ -106,10 +121,12 @@ void vSomeTask1( void *pvParameters )
 
         closePin(BACK_LEFT_UP_PIN);
         closePin(BACK_LEFT_DOWN_PIN);
-        closePin(FORWARD_LEFT_UP_PIN);
-        closePin(FORWARD_LEFT_UP_PIN);
+        closePin(BACK_RIGHT_UP_PIN);
+        closePin(BACK_RIGHT_DOWN_PIN);
 
         vTaskDelay( 10000 / portTICK_RATE_MS);
+
+        //sciDisplayText(TEXT1, TSIZE1);
     }
     vTaskDelete( NULL );
 }
@@ -123,15 +140,14 @@ int main(void)
 
     gioInit();
     initializeHetPins();
+    initializeSci();
 
     portBASE_TYPE result = pdFALSE;
 
-    //result = xTaskCreate(vSomeTask, "BlinkTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    result = xTaskCreate(vSomeTask, "BlinkTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
     result = xTaskCreate(vSomeTask1, "BlinkTask1", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
 
     vTaskStartScheduler();
-
-
 
     while(1) ;
 /* USER CODE END */
@@ -141,4 +157,6 @@ int main(void)
 
 
 /* USER CODE BEGIN (4) */
+
+
 /* USER CODE END */
