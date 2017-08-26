@@ -64,6 +64,7 @@
 *                                                                    TI_FEE_FLASH_CHECKSUM_ENABLE.    
 * 01.19.00        08Augu2016   Vishwanath Reddy     SDOCM00122592    Update patch version TI_FEE_MINOR_VERSION.
 * 01.19.01        12Augu2016   Vishwanath Reddy     SDOCM00122543    Update patch version TI_FEE_MINOR_VERSION.
+* 01.19.02        25Janu2017   Vishwanath Reddy     SDOCM00122832    Update patch version TI_FEE_MINOR_VERSION.
  *********************************************************************************************************************/
 /* Total Number of Requirements : FEE : 104 */ 
 
@@ -127,7 +128,7 @@
 #if (TI_FEE_SW_MINOR_VERSION != 19U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_MINOR_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_MINOR_VERSION */
-#if (TI_FEE_SW_PATCH_VERSION != 1U)
+#if (TI_FEE_SW_PATCH_VERSION != 2U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_PATCH_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_PATCH_VERSION */
 

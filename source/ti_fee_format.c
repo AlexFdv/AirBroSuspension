@@ -23,16 +23,18 @@
  *                                                                    MISRA C fixes.
  *                                                   SDOCM00105415    API can now be called with out TI_Fee_Init
  *                                                                    being called.
- * 01.16.00		  15Jul2014    Vishwanath Reddy 	SDOCM00112141    Remove  MISRA warnings.
- * 01.17.00		  15Oct2014    Vishwanath Reddy     SDOCM00113379    RAM Optimization changes.
- * 01.17.02		  26Dec2014    Vishwanath Reddy     SDOCM00114102    FLEE Errata Fix.
- * 01.18.00		  12Oct2015    Vishwanath Reddy     SDOCM00119455    Update version history.
- * 01.18.01		  17Nov2015    Vishwanath Reddy     SDOCM00120161    Update version history.
- * 01.18.02		  05Feb2016    Vishwanath Reddy     SDOCM00121158    Update version history.
- * 01.18.03       30June2016   Vishwanath Reddy     SDOCM00122388    Update version history. 
- * 01.19.00       08Augu2016   Vishwanath Reddy     SDOCM00122592    Update code to erase sector, when multiple 
- *                                                  SDOCM00122542    sectors are combined to form a VS.
- * 01.19.01       12Augu2016   Vishwanath Reddy     SDOCM00122543    Update version history.
+ * 01.16.00		  15Jul2014     Vishwanath Reddy 	 SDOCM00112141    Remove  MISRA warnings.
+ * 01.17.00		  15Oct2014     Vishwanath Reddy     SDOCM00113379    RAM Optimization changes.
+ * 01.17.02		  26Dec2014     Vishwanath Reddy     SDOCM00114102    FLEE Errata Fix.
+ * 01.18.00		  12Oct2015     Vishwanath Reddy     SDOCM00119455    Update version history.
+ * 01.18.01		  17Nov2015     Vishwanath Reddy     SDOCM00120161    Update version history.
+ * 01.18.02		  05Feb2016     Vishwanath Reddy     SDOCM00121158    Update version history.
+ * 01.18.03       30June2016    Vishwanath Reddy     SDOCM00122388    Update version history. 
+ * 01.19.00       08Augu2016    Vishwanath Reddy     SDOCM00122592    Update code to erase sector, when multiple 
+ *                                                   SDOCM00122542    sectors are combined to form a VS.
+ * 01.19.01       12Augu2016    Vishwanath Reddy     SDOCM00122543    Update version history.
+ * 01.19.02       25Janu2017    Vishwanath Reddy     SDOCM00122832    Update code to erase sector, when multiple 
+ *                                                                    sectors are combined to form a VS.
  *********************************************************************************************************************/
 
 /*
@@ -140,8 +142,7 @@ boolean TI_Fee_Format(uint32 u32FormatKey)
 				for(u16Index=0U;u16Index<=(oSectorEnd-oSectorStart);u16Index++)
 				{
 					TI_Fee_GlobalVariables[u8EEPIndex].Fee_oVirtualSectorStartAddress=
-					Device_FlashDevice.Device_BankInfo[FEE_BANK].Device_SectorInfo[TI_Fee_GlobalVariables[u8EEPIndex].Fee_u8VirtualSectorEnd].Device_SectorStartAddress;
-					TI_Fee_GlobalVariables[u8EEPIndex].Fee_u8VirtualSectorEnd -= 1U;
+					Device_FlashDevice.Device_BankInfo[FEE_BANK].Device_SectorInfo[TI_Fee_GlobalVariables[u8EEPIndex].Fee_u8VirtualSectorEnd].Device_SectorStartAddress;					
 					/* Errata : Enable only required sector to erase. */
 					TI_FeeInternal_EnableRequiredFlashSector(TI_Fee_GlobalVariables[u8EEPIndex].Fee_oVirtualSectorStartAddress);		
 					/*SAFETYMCUSW 496 S MR:8.1 <APPROVED> "Reason -  Fapi_issueAsyncCommandWithAddress is part of F021 and is included via F021.h."*/
@@ -175,6 +176,7 @@ boolean TI_Fee_Format(uint32 u32FormatKey)
 							TI_Fee_u8ErrEraseVS = 0x1U << (Fee_VirtualSectorConfiguration[u16LoopIndex].FeeVirtualSectorNumber-1U);	
 						}									
 					}
+					TI_Fee_GlobalVariables[u8EEPIndex].Fee_u8VirtualSectorEnd -= 1U;
 				}
 			}
 		}

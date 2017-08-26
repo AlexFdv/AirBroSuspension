@@ -1,7 +1,7 @@
 /** @file sys_main.c 
 *   @brief Application main file
-*   @date 05-Oct-2016
-*   @version 04.06.00
+*   @date 08-Feb-2017
+*   @version 04.06.01
 *
 *   This file contains an empty main function,
 *   which can be used for the application.
@@ -58,38 +58,68 @@
 
 #include "FreeRTOS.h"
 #include "os_task.h"
+#include "os_queue.h"
 
 #include "HetConstants.h"
-
-// serial communication interface
-
-#define TSIZE1 12
-const uint32 TEXT1[TSIZE1] = { '\r', '\n', '|', '\t', 'C', 'H', '.', 'I', 'D', '=',
-                        '0', 'x' };
-#define TSIZE2 9
-const uint32 TEXT2[TSIZE2] = { '\t', 'V', 'A', 'L', 'U', 'E', '=', '0', 'x' };
 /* USER CODE END */
 
-/** @fn void main(void)
-*   @brief Application main function
-*   @note This function is empty by default.
-*
-*   This function is called after startup.
-*   The user can use this function to implement the application.
-*/
 
 /* USER CODE BEGIN (2) */
+void printText(const char* text);
 
-#define LEN 10
-void vSomeTask( void *pvParameters )
+// variables
+#define MAX_COMMAND_LEN 10
+
+xQueueHandle queueHandle;
+
+typedef struct
 {
+    char command[MAX_COMMAND_LEN];
+    short commandLen;
+} Command;
+
+void vCommandReceiverTask( void *pvParameters )
+{
+    portBASE_TYPE xStatus;
+    char recevedCommand[MAX_COMMAND_LEN] = {'\0'};
+
     for( ;; )
     {
-        uint32 recevedArr[LEN] = {'\0'};
-        uint32 receivedLen = 0;
-        if (sciReceiveText(recevedArr, LEN, &receivedLen))
+        Command cmd;
+
+        short receivedLen = 0; // use portSHORT ???
+        sciReceiveText(recevedCommand, &receivedLen, MAX_COMMAND_LEN);
+
+        strncpy(cmd.command, recevedCommand, receivedLen);
+        cmd.commandLen = receivedLen;
+
+        xStatus = xQueueSendToBack(queueHandle, &cmd, 0);
+        if (xStatus != pdPASS)
         {
-            sciDisplayText(recevedArr, receivedLen);
+            printText("Could not add value to the queue.\r\n");
+        }
+
+        taskYIELD();
+    }
+    vTaskDelete( NULL );
+}
+
+void vCommandHandlerTask( void *pvParameters )
+{
+    portBASE_TYPE xStatus;
+    for( ;; )
+    {
+        Command receivedCommand;
+        xStatus = xQueueReceive(queueHandle, &receivedCommand, portMAX_DELAY);
+        if (xStatus == pdPASS)
+        {
+            printText("Received the command: ");
+            sciDisplayText(receivedCommand.command, receivedCommand.commandLen);
+            printText("\r\n");
+        }
+        else
+        {
+            printText("Could not receive a value from the queue.\r\n");
         }
     }
     vTaskDelete( NULL );
@@ -99,7 +129,6 @@ void vSomeTask1( void *pvParameters )
 {
     for( ;; )
     {
-
         openPin(FORWARD_LEFT_UP_PIN);
         openPin(FORWARD_LEFT_DOWN_PIN);
         openPin(FORWARD_RIGHT_UP_PIN);
@@ -110,7 +139,7 @@ void vSomeTask1( void *pvParameters )
         openPin(BACK_RIGHT_UP_PIN);
         openPin(BACK_RIGHT_DOWN_PIN);
 
-        vTaskDelay( 10000 / portTICK_RATE_MS);
+        vTaskDelay( 2000 / portTICK_RATE_MS);
 
         //sciDisplayText(TEXT2, TSIZE2);
 
@@ -124,31 +153,49 @@ void vSomeTask1( void *pvParameters )
         closePin(BACK_RIGHT_UP_PIN);
         closePin(BACK_RIGHT_DOWN_PIN);
 
-        vTaskDelay( 10000 / portTICK_RATE_MS);
+        vTaskDelay( 2000 / portTICK_RATE_MS);
 
-        //sciDisplayText(TEXT1, TSIZE1);
+        printText("***Blink***\r\n");
     }
     vTaskDelete( NULL );
 }
-
 
 /* USER CODE END */
 
 int main(void)
 {
 /* USER CODE BEGIN (3) */
-
     gioInit();
     initializeHetPins();
     initializeSci();
 
-    portBASE_TYPE result = pdFALSE;
+    portBASE_TYPE result = pdFAIL;
+    queueHandle = xQueueCreate(5, sizeof(Command));
 
-    result = xTaskCreate(vSomeTask, "BlinkTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    result = xTaskCreate(vSomeTask1, "BlinkTask1", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    result = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    if (result != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    result = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    if (result != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    //result = xTaskCreate(vSomeTask1, "BlinkTask1", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    //if (result != pdPASS)
+    //{
+    //    goto ERROR;
+    //}
+
+    printText("Controller started\r\n");
 
     vTaskStartScheduler();
 
+ERROR:
+    printText("Initialization error\r\n");
     while(1) ;
 /* USER CODE END */
 
@@ -158,5 +205,10 @@ int main(void)
 
 /* USER CODE BEGIN (4) */
 
+//prints the text with terminated null char
+void printText(const char* errorText)
+{
+    sciDisplayText(errorText, strlen(errorText));
+}
 
 /* USER CODE END */

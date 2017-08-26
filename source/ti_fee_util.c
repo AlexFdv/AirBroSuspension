@@ -100,7 +100,9 @@
  *                                                                   TI_FeeInternal_FeeManager modified to update block
  *                                                                   copy status of unconfigured blocks correctly.
  *                                                                   TI_FeeInternal_WriteDataF021 updated to check
- *                                                                   if copy source address is within Bank7 address. 
+ *                                                                   if copy source address is within Bank7 address.
+ * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    In API TI_Fee_ErrorRecovery, added polling for
+ *                                                                   flash status before calling TI_Fee_Init.  
  *********************************************************************************************************************/
 
 /*
@@ -3689,6 +3691,7 @@ void TI_Fee_ErrorRecovery(TI_Fee_ErrorCodeType ErrorCode, uint8 u8VirtualSector)
 																				  TRUE, u8EEPIndex);
 			TI_FeeInternal_WriteVirtualSectorHeader(u8VirtualSector,VsState_ReadyForErase, u8EEPIndex);			
 			TI_Fee_u32ActCpyVS = 0U;
+			(void)TI_FeeInternal_PollFlashStatus();
 			TI_Fee_Init();
 			break;		
 		
@@ -3701,6 +3704,7 @@ void TI_Fee_ErrorRecovery(TI_Fee_ErrorCodeType ErrorCode, uint8 u8VirtualSector)
 		case Error_CopyButNoActiveVS:			
 			TI_FeeInternal_WriteVirtualSectorHeader(u8VirtualSector,VsState_Active, u8EEPIndex);
 			TI_Fee_u32ActCpyVS = 0U;
+			(void)TI_FeeInternal_PollFlashStatus();
 			/* Call Init to capture the address of blocks, next write address etc.*/
 			TI_Fee_Init();
 			break;

@@ -12,39 +12,39 @@ void initializeSci()
     sciInit();
 }
 
-void sciDisplayText(uint32 *text, uint32 length)
+void sciDisplayText(const char *text, short length)
 {
     sciBASE_t *sciReg = scilinREG;
     while (length--)
     {
-        uint32 chr = *(text++);
+        uint32 chr = (uint32)(*(text++));
         while ((sciReg->FLR & 0x4) == 4)
             ; /* wait until busy */
         sciSendByte(sciReg, chr); /* send out text */
     };
 }
 
-bool sciReceiveText(uint32 *outtext, uint32 maxLength, uint32 *receivedLength)
+void sciReceiveText(char *receivedtext, short *receivedLength, short maxLength)
 {
-    uint32 receivedSize = 0;
-    if(sciIsRxReady(scilinREG))
-    {
-        uint32 ch = 0x00;
-        while (receivedSize < maxLength)
-        {
-            ch = sciReceiveByte(scilinREG);
-            if (ch == 0x0D)
-                break;
-            outtext[receivedSize] = ch;
-            ++receivedSize;
+    const uint32 STOP_CHAR = 0x0D;
 
-        }
-
-        *receivedLength = receivedSize;
-        return true;
-    }
-    else
+    short receivedSize = 0;
+    uint32 ch = 0x00;
+    do
     {
-        return false;
+        ch = sciReceiveByte(scilinREG);
+        if (ch == STOP_CHAR)
+            break;
+        receivedtext[receivedSize] = (char)ch;
+        ++receivedSize;
+    } while (receivedSize < maxLength);
+
+    if (receivedSize > maxLength)
+    {
+        //skip all others bytes until end of line
+        while (sciReceiveByte(scilinREG) != STOP_CHAR)
+            ;
     }
+
+    *receivedLength = receivedSize;
 }

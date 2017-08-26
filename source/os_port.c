@@ -66,6 +66,8 @@
 
     1 tab == 4 spaces!
 */
+/* USER CODE BEGIN (0) */
+/* USER CODE END */
 
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
@@ -74,8 +76,12 @@
 #include "os_task.h"
 #include "sys_core.h"
 
+/* USER CODE BEGIN (1) */
+/* USER CODE END */
 
 #undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
+/* USER CODE BEGIN (2) */
+/* USER CODE END */
 
 /*-----------------------------------------------------------*/
 
@@ -105,6 +111,8 @@
 R0 (in which the parameters are passed. */
 #define portSPACE_BETWEEN_TOS_AND_PARAMETERS	( 12 )
 
+/* USER CODE BEGIN (3) */
+/* USER CODE END */
 
 /*-----------------------------------------------------------*/
 
@@ -116,7 +124,8 @@ extern void prvMpuEnable( void );
 extern void prvMpuDisable( void );
 extern void prvMpuSetRegion( unsigned region, unsigned base, unsigned size, unsigned access );
 
-
+/* USER CODE BEGIN (4) */
+/* USER CODE END */
 /*-----------------------------------------------------------*/
 
 /* Count of the critical section nesting depth. */
@@ -129,6 +138,8 @@ require an FPU context. */
 PRIVILEGED_DATA uint32_t ulTaskHasFPUContext = 0;
 
 /*-----------------------------------------------------------*/
+/* USER CODE BEGIN (5) */
+/* USER CODE END */
 
 /*-----------------------------------------------------------*/
 
@@ -255,6 +266,8 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMOR
 
 	if( xRegions == NULL )
 	{
+/* USER CODE BEGIN (6) */
+/* USER CODE END */
 		/* No MPU regions are specified so allow access to all of the RAM. */
 		xMPUSettings->xRegion[0].ulRegionBaseAddress = 0x08000000;
 		xMPUSettings->xRegion[0].ulRegionSize        = portMPU_SIZE_512KB | portMPU_REGION_ENABLE;
@@ -266,6 +279,8 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMOR
 		xMPUSettings->xRegion[1].ulRegionSize        = portMPU_SIZE_4KB | portMPU_REGION_ENABLE;
 		xMPUSettings->xRegion[1].ulRegionAttribute   = portMPU_PRIV_RW_USER_NA_NOEXEC | portMPU_NORMAL_OIWTNOWA_SHARED;
 
+/* USER CODE BEGIN (7) */
+/* USER CODE END */
 		/* Invalidate all other regions. */
 		for( ul = 2; ul <= portNUM_CONFIGURABLE_REGIONS; ul++ )
 		{
@@ -273,9 +288,13 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMOR
 			xMPUSettings->xRegion[ ul ].ulRegionSize        = 0UL;
 			xMPUSettings->xRegion[ ul ].ulRegionAttribute   = 0UL;
 		}
+/* USER CODE BEGIN (8) */
+/* USER CODE END */
 	}
 	else
 	{
+/* USER CODE BEGIN (9) */
+/* USER CODE END */
 		/* This function is called automatically when the task is created - in
 		which case the stack region parameters will be valid.  At all other
 		times the stack parameters will not be valid and it is assumed that the
@@ -288,6 +307,8 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMOR
 			xMPUSettings->xRegion[0].ulRegionAttribute   = portMPU_REGION_READ_WRITE | portMPU_NORMAL_OIWTNOWA_SHARED;
 
 		}
+/* USER CODE BEGIN (10) */
+/* USER CODE END */
 		lIndex = 0;
 
 		for( ul = 1; ul <= portNUM_CONFIGURABLE_REGIONS; ul++ )
@@ -310,7 +331,11 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS *xMPUSettings, const struct xMEMOR
 			}
 			lIndex++;
 		}
+/* USER CODE BEGIN (11) */
+/* USER CODE END */
 	}
+/* USER CODE BEGIN (12) */
+/* USER CODE END */
 }
 
 /*----------------------------------------------------------------------------*/
