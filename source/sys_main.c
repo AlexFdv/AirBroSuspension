@@ -52,9 +52,11 @@
 /* USER CODE BEGIN (1) */
 #include "gio.h"
 #include "het.h"
+#include "sci.h"
+
 #include "HetPinsController.h"
 #include "SerialController.h"
-#include "sci.h"
+#include "Commands.h"
 
 #include "FreeRTOS.h"
 #include "os_task.h"
@@ -65,36 +67,29 @@
 
 
 /* USER CODE BEGIN (2) */
+
+xQueueHandle commandsQueueHandle;
+
 void printText(const char* text);
+void processCommand(Command* command);
 
-// variables
-#define MAX_COMMAND_LEN 10
-
-xQueueHandle queueHandle;
-
-typedef struct
-{
-    char command[MAX_COMMAND_LEN];
-    short commandLen;
-} Command;
+void upFunction();
+void downFunction();
+void stopFunction();
 
 void vCommandReceiverTask( void *pvParameters )
 {
     portBASE_TYPE xStatus;
-    char recevedCommand[MAX_COMMAND_LEN] = {'\0'};
+    portCHAR recevedCommand[MAX_COMMAND_LEN] = {'\0'};
 
     for( ;; )
     {
-        Command cmd;
-
-        short receivedLen = 0; // use portSHORT ???
+        memset(recevedCommand, 0, MAX_COMMAND_LEN);
+        portSHORT receivedLen = 0;
         sciReceiveText(recevedCommand, &receivedLen, MAX_COMMAND_LEN);
 
-        strncpy(cmd.command, recevedCommand, receivedLen);
-        cmd.commandLen = receivedLen;
-
-        xStatus = xQueueSendToBack(queueHandle, &cmd, 0);
-        if (xStatus != pdPASS)
+        xStatus = xQueueSendToBack(commandsQueueHandle, recevedCommand, 0);
+        if (xStatus != pdTRUE)
         {
             printText("Could not add value to the queue.\r\n");
         }
@@ -107,15 +102,23 @@ void vCommandReceiverTask( void *pvParameters )
 void vCommandHandlerTask( void *pvParameters )
 {
     portBASE_TYPE xStatus;
+
+    portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
     for( ;; )
     {
-        Command receivedCommand;
-        xStatus = xQueueReceive(queueHandle, &receivedCommand, portMAX_DELAY);
-        if (xStatus == pdPASS)
+        memset(receivedCommand, 0, MAX_COMMAND_LEN);
+        xStatus = xQueueReceive(commandsQueueHandle, receivedCommand, portMAX_DELAY);
+        if (xStatus == pdTRUE)
         {
             printText("Received the command: ");
-            sciDisplayText(receivedCommand.command, receivedCommand.commandLen);
+            sciDisplayText(receivedCommand, MAX_COMMAND_LEN);
             printText("\r\n");
+
+            Command* cmd = getCommand(receivedCommand);
+            if (cmd != NULL)
+                cmd->action();
+            else
+                printText("Unknown command \r\n");
         }
         else
         {
@@ -124,7 +127,7 @@ void vCommandHandlerTask( void *pvParameters )
     }
     vTaskDelete( NULL );
 }
-
+/*
 void vSomeTask1( void *pvParameters )
 {
     for( ;; )
@@ -158,7 +161,7 @@ void vSomeTask1( void *pvParameters )
         printText("***Blink***\r\n");
     }
     vTaskDelete( NULL );
-}
+}*/
 
 /* USER CODE END */
 
@@ -169,28 +172,34 @@ int main(void)
     initializeHetPins();
     initializeSci();
 
-    portBASE_TYPE result = pdFAIL;
-    queueHandle = xQueueCreate(5, sizeof(Command));
+    portBASE_TYPE taskResult = pdFAIL;
+    bool regResult = true;
 
-    result = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    if (result != pdPASS)
+    commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
+
+    taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    if (taskResult != pdPASS)
     {
         goto ERROR;
     }
 
-    result = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    if (result != pdPASS)
+    taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
+    if (taskResult != pdPASS)
     {
         goto ERROR;
     }
-
-    //result = xTaskCreate(vSomeTask1, "BlinkTask1", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    //if (result != pdPASS)
-    //{
-    //    goto ERROR;
-    //}
 
     printText("Controller started\r\n");
+
+
+    regResult &= registerCommandByName("up", &upFunction);
+    regResult &= registerCommandByName("down", &downFunction);
+    regResult &= registerCommandByName("stop", &stopFunction);
+
+    if (!regResult)
+    {
+        goto ERROR;
+    }
 
     vTaskStartScheduler();
 
@@ -204,6 +213,40 @@ ERROR:
 
 
 /* USER CODE BEGIN (4) */
+
+void upFunction()
+{
+    printText("UpFunction \r\n");
+    openPin(FORWARD_LEFT_UP_PIN);
+    openPin(FORWARD_RIGHT_UP_PIN);
+    openPin(BACK_LEFT_UP_PIN);
+    openPin(BACK_RIGHT_UP_PIN);
+}
+
+void downFunction()
+{
+    printText("DownFunction \r\n");
+
+    openPin(FORWARD_LEFT_DOWN_PIN);
+    openPin(FORWARD_RIGHT_DOWN_PIN);
+    openPin(BACK_LEFT_DOWN_PIN);
+    openPin(BACK_RIGHT_DOWN_PIN);
+}
+
+void stopFunction()
+{
+    printText("StopFunction \r\n");
+
+    closePin(FORWARD_LEFT_UP_PIN);
+    closePin(FORWARD_LEFT_DOWN_PIN);
+    closePin(FORWARD_RIGHT_UP_PIN);
+    closePin(FORWARD_RIGHT_DOWN_PIN);
+
+    closePin(BACK_LEFT_UP_PIN);
+    closePin(BACK_LEFT_DOWN_PIN);
+    closePin(BACK_RIGHT_UP_PIN);
+    closePin(BACK_RIGHT_DOWN_PIN);
+}
 
 //prints the text with terminated null char
 void printText(const char* errorText)

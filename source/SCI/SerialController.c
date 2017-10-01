@@ -39,12 +39,5 @@ void sciReceiveText(char *receivedtext, short *receivedLength, short maxLength)
         ++receivedSize;
     } while (receivedSize < maxLength);
 
-    if (receivedSize > maxLength)
-    {
-        //skip all others bytes until end of line
-        while (sciReceiveByte(scilinREG) != STOP_CHAR)
-            ;
-    }
-
     *receivedLength = receivedSize;
 }
