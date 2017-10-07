@@ -13,22 +13,37 @@
 #include "FreeRTOS.h"
 
 #define MAX_COMMAND_LEN 10
-#define MAX_REGISTERED_COMMANDS 15
+#define COMMANDS_LIMIT_COUNT 15
+#define COMMAND_ARGS_LIMIT 5
 
-typedef void (*commandFunctionPtr)();
+#define WHEELS_COUNT 4
+typedef enum
+{
+    FL_WHEEL = 0,  // front left
+    FR_WHEEL = 1,  // front right
+    BL_WHEEL = 2,  // back left
+    BR_WHEEL = 3   // back right
+} WHEELS;
+
+typedef enum
+{
+    WHEEL_COMMAND_TYPE = 0b10000000,
+    WHEEL_UP   = WHEEL_COMMAND_TYPE | 0b00000001,
+    WHEEL_DOWN = WHEEL_COMMAND_TYPE | 0b00000010,
+    WHEEL_STOP = WHEEL_COMMAND_TYPE | 0b00000100,
+
+    MEMORY_COMMAND_TYPE = 0b01000000,
+    MEMORY_SAVE  = MEMORY_COMMAND_TYPE | 0b00000001,
+    MEMORY_CLEAR = MEMORY_COMMAND_TYPE | 0b00000010,
+    MEMORY_GET   = MEMORY_COMMAND_TYPE | 0b00000100
+} COMMAND_TYPE;
 
 typedef struct
 {
-    portCHAR commandName[MAX_COMMAND_LEN];
-    portSHORT commandLen;
-    commandFunctionPtr action;
+    COMMAND_TYPE Command;                  // command type, such as wheel command (up, down, stop), memory command (save, get, etc).
+    portCHAR argv[COMMAND_ARGS_LIMIT];
+    portCHAR argc;
 } Command;
-
-static Command registeredCommands[MAX_REGISTERED_COMMANDS] = {'\0'};
-static uint16 uCurrentNumberOfCommands = 0;
-
-Command* getCommand(const portCHAR receivedCommand[MAX_COMMAND_LEN]);
-bool registerCommandByName(const portCHAR* commandName, commandFunctionPtr funcPtr);
-bool registerCommand(const Command* cmd);
+typedef Command* CommandPtr;
 
 #endif /* SOURCE_INCLUDES_COMMANDS_H_ */

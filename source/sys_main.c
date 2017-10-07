@@ -69,14 +69,35 @@
 /* USER CODE BEGIN (2) */
 
 xQueueHandle commandsQueueHandle;
+xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 
 void printText(const char* text);
-void processCommand(Command* command);
+void printText_ex(const char* text, short maxLen);
 
-void upFunction();
-void downFunction();
-void stopFunction();
+typedef void (*CommandHandlerPtr)(void*);
 
+CommandHandlerPtr parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
+void upFunction(void*);
+void downFunction(void*);
+void stopFunction(void*);
+
+typedef struct
+{
+    WHEELS wheel;
+    portCHAR upPin;
+    portCHAR downPin;
+} WheelPinsStruct;
+
+WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
+WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
+WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
+WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
+
+/*
+ * Tasks implementation
+*/
+
+// TODO: move receiving to the interruption
 void vCommandReceiverTask( void *pvParameters )
 {
     portBASE_TYPE xStatus;
@@ -86,7 +107,7 @@ void vCommandReceiverTask( void *pvParameters )
     {
         memset(recevedCommand, 0, MAX_COMMAND_LEN);
         portSHORT receivedLen = 0;
-        sciReceiveText(recevedCommand, &receivedLen, MAX_COMMAND_LEN);
+        sciReceiveData(recevedCommand, &receivedLen, MAX_COMMAND_LEN);
 
         xStatus = xQueueSendToBack(commandsQueueHandle, recevedCommand, 0);
         if (xStatus != pdTRUE)
@@ -111,14 +132,18 @@ void vCommandHandlerTask( void *pvParameters )
         if (xStatus == pdTRUE)
         {
             printText("Received the command: ");
-            sciDisplayText(receivedCommand, MAX_COMMAND_LEN);
+            printText_ex(receivedCommand, MAX_COMMAND_LEN);
             printText("\r\n");
 
-            Command* cmd = getCommand(receivedCommand);
-            if (cmd != NULL)
-                cmd->action();
+            CommandHandlerPtr handler = parseStringCommand(receivedCommand);
+            if (handler != NULL)
+            {
+                handler(receivedCommand);
+            }
             else
+            {
                 printText("Unknown command \r\n");
+            }
         }
         else
         {
@@ -127,41 +152,51 @@ void vCommandHandlerTask( void *pvParameters )
     }
     vTaskDelete( NULL );
 }
-/*
-void vSomeTask1( void *pvParameters )
+
+void vWheelTask( void *pvParameters )
 {
+    portBASE_TYPE xStatus;
+
+    WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
+
+    TickType_t timeOut = portMAX_DELAY;
     for( ;; )
     {
-        openPin(FORWARD_LEFT_UP_PIN);
-        openPin(FORWARD_LEFT_DOWN_PIN);
-        openPin(FORWARD_RIGHT_UP_PIN);
-        openPin(FORWARD_RIGHT_DOWN_PIN);
+        Command cmd;
+        xStatus = xQueueReceive(wheelsCommandsQueueHandles[wheelPins.wheel], &cmd, timeOut);
+        timeOut = 0;
 
-        openPin(BACK_LEFT_UP_PIN);
-        openPin(BACK_LEFT_DOWN_PIN);
-        openPin(BACK_RIGHT_UP_PIN);
-        openPin(BACK_RIGHT_DOWN_PIN);
+        // new command received
+        if (xStatus == pdTRUE)
+        {
 
-        vTaskDelay( 2000 / portTICK_RATE_MS);
+            //close pins before a new command execution
+            closePin(wheelPins.upPin);
+            closePin(wheelPins.downPin);
 
-        //sciDisplayText(TEXT2, TSIZE2);
+            switch (cmd.Command) {
+                case WHEEL_UP:
+                    openPin(wheelPins.upPin);
+                    break;
+                case WHEEL_DOWN:
+                     openPin(wheelPins.downPin);
+                     break;
+                case WHEEL_STOP:
+                    // already closed
+                    break;
+                default:
+                    // TODO: unknown command, log it
+                    break;
+            }
+        } // end new command
 
-        closePin(FORWARD_LEFT_UP_PIN);
-        closePin(FORWARD_LEFT_DOWN_PIN);
-        closePin(FORWARD_RIGHT_UP_PIN);
-        closePin(FORWARD_RIGHT_DOWN_PIN);
+        // here we should check that we do not exceeded a needed level
+        // if it happens then stop task and wait for a new command
 
-        closePin(BACK_LEFT_UP_PIN);
-        closePin(BACK_LEFT_DOWN_PIN);
-        closePin(BACK_RIGHT_UP_PIN);
-        closePin(BACK_RIGHT_DOWN_PIN);
-
-        vTaskDelay( 2000 / portTICK_RATE_MS);
-
-        printText("***Blink***\r\n");
+        timeOut = portMAX_DELAY;
     }
     vTaskDelete( NULL );
-}*/
+}
 
 /* USER CODE END */
 
@@ -177,6 +212,15 @@ int main(void)
 
     commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
 
+    int i = 0;
+    for (; i< WHEELS_COUNT; ++i)
+    {
+        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(Command));  // the only command for each wheel
+    }
+
+    /*
+     *  Create tasks
+     */
     taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
     if (taskResult != pdPASS)
     {
@@ -189,22 +233,41 @@ int main(void)
         goto ERROR;
     }
 
-    printText("Controller started\r\n");
-
-
-    regResult &= registerCommandByName("up", &upFunction);
-    regResult &= registerCommandByName("down", &downFunction);
-    regResult &= registerCommandByName("stop", &stopFunction);
+    /*
+     *  Wheels tasks
+    */
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskFL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFL, 3, NULL);
+    if (taskResult != pdPASS)
+    {
+            goto ERROR;
+    }
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskFR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFR, 3, NULL);
+    if (taskResult != pdPASS)
+    {
+            goto ERROR;
+    }
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskBL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBL, 3, NULL);
+    if (taskResult != pdPASS)
+    {
+            goto ERROR;
+    }
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskBR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBR, 3, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
 
     if (!regResult)
     {
         goto ERROR;
     }
 
+    printText("Controller started\r\n");
+
     vTaskStartScheduler();
 
 ERROR:
-    printText("Initialization error\r\n");
+    printText("Initialization error\r");
     while(1) ;
 /* USER CODE END */
 
@@ -214,44 +277,86 @@ ERROR:
 
 /* USER CODE BEGIN (4) */
 
-void upFunction()
+
+CommandHandlerPtr parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
-    printText("UpFunction \r\n");
-    openPin(FORWARD_LEFT_UP_PIN);
-    openPin(FORWARD_RIGHT_UP_PIN);
-    openPin(BACK_LEFT_UP_PIN);
-    openPin(BACK_RIGHT_UP_PIN);
+    CommandHandlerPtr handler;
+    if (0 == strncmp(command, "up", 2))
+    {
+        handler = &upFunction;
+        return handler;
+    }
+
+    if (0 == strncmp(command, "down", 4))
+    {
+        handler = &downFunction;
+        return handler;
+    }
+
+    if (0 == strncmp(command, "stop", 4))
+    {
+        handler = &stopFunction;
+        return handler;
+    }
+
+    return NULL;
 }
 
-void downFunction()
+
+void upFunction(void* args)
+{
+    printText("UpFunction \r\n");
+
+    Command cmd;
+    cmd.Command = WHEEL_UP;
+    cmd.argc = 0;
+
+    portCHAR i = 0;
+    for (; i< WHEELS_COUNT; ++i)
+    {
+        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+    }
+}
+
+void downFunction(void* args)
 {
     printText("DownFunction \r\n");
 
-    openPin(FORWARD_LEFT_DOWN_PIN);
-    openPin(FORWARD_RIGHT_DOWN_PIN);
-    openPin(BACK_LEFT_DOWN_PIN);
-    openPin(BACK_RIGHT_DOWN_PIN);
+    Command cmd;
+    cmd.Command = WHEEL_DOWN;
+    cmd.argc = 0;
+
+    int i = 0;
+    for (; i< WHEELS_COUNT; ++i)
+    {
+        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+    }
 }
 
-void stopFunction()
+void stopFunction(void* args)
 {
     printText("StopFunction \r\n");
 
-    closePin(FORWARD_LEFT_UP_PIN);
-    closePin(FORWARD_LEFT_DOWN_PIN);
-    closePin(FORWARD_RIGHT_UP_PIN);
-    closePin(FORWARD_RIGHT_DOWN_PIN);
+    Command cmd;
+    cmd.Command = WHEEL_STOP;
+    cmd.argc = 0;
 
-    closePin(BACK_LEFT_UP_PIN);
-    closePin(BACK_LEFT_DOWN_PIN);
-    closePin(BACK_RIGHT_UP_PIN);
-    closePin(BACK_RIGHT_DOWN_PIN);
+    int i = 0;
+    for (; i< WHEELS_COUNT; ++i)
+    {
+        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+    }
 }
 
 //prints the text with terminated null char
 void printText(const char* errorText)
 {
-    sciDisplayText(errorText, strlen(errorText));
+    sciDisplayData(errorText, strlen(errorText));
+}
+
+void printText_ex(const char* errorText, short maxLen)
+{
+    sciDisplayData(errorText, maxLen);
 }
 
 /* USER CODE END */

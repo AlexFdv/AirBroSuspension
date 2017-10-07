@@ -12,7 +12,7 @@ void initializeSci()
     sciInit();
 }
 
-void sciDisplayText(const char *text, short length)
+void sciDisplayData(const char *text, short length)
 {
     sciBASE_t *sciReg = scilinREG;
     while (length--)
@@ -24,7 +24,7 @@ void sciDisplayText(const char *text, short length)
     };
 }
 
-void sciReceiveText(char *receivedtext, short *receivedLength, short maxLength)
+void sciReceiveData(char *receivedtext, short *receivedLength, short maxLength)
 {
     const uint32 STOP_CHAR = 0x0D;
 
