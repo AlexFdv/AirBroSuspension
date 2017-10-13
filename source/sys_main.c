@@ -43,6 +43,7 @@
 
 
 /* USER CODE BEGIN (0) */
+
 /* USER CODE END */
 
 /* Include Files */
@@ -76,18 +77,17 @@ void printText_ex(const char* text, short maxLen);
 
 typedef void (*CommandHandlerPtr)(void*);
 
-CommandHandlerPtr parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
-void upFunction(void*);
-void downFunction(void*);
-void stopFunction(void*);
+Command parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
+void executeCommand(Command);
 
 typedef struct
 {
-    WHEELS wheel;
+    WHEEL wheel;
     portCHAR upPin;
     portCHAR downPin;
 } WheelPinsStruct;
 
+// assosiations with pins
 WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
 WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
 WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
@@ -135,15 +135,8 @@ void vCommandHandlerTask( void *pvParameters )
             printText_ex(receivedCommand, MAX_COMMAND_LEN);
             printText("\r\n");
 
-            CommandHandlerPtr handler = parseStringCommand(receivedCommand);
-            if (handler != NULL)
-            {
-                handler(receivedCommand);
-            }
-            else
-            {
-                printText("Unknown command \r\n");
-            }
+            Command command = parseStringCommand(receivedCommand);
+            executeCommand(command);
         }
         else
         {
@@ -162,26 +155,25 @@ void vWheelTask( void *pvParameters )
     TickType_t timeOut = portMAX_DELAY;
     for( ;; )
     {
-        Command cmd;
+        WheelCommand cmd;
         xStatus = xQueueReceive(wheelsCommandsQueueHandles[wheelPins.wheel], &cmd, timeOut);
         timeOut = 0;
 
         // new command received
         if (xStatus == pdTRUE)
         {
-
             //close pins before a new command execution
             closePin(wheelPins.upPin);
             closePin(wheelPins.downPin);
 
             switch (cmd.Command) {
-                case WHEEL_UP:
+                case CMD_WHEEL_UP:
                     openPin(wheelPins.upPin);
                     break;
-                case WHEEL_DOWN:
+                case CMD_WHEEL_DOWN:
                      openPin(wheelPins.downPin);
                      break;
-                case WHEEL_STOP:
+                case CMD_WHEEL_STOP:
                     // already closed
                     break;
                 default:
@@ -215,7 +207,7 @@ int main(void)
     int i = 0;
     for (; i< WHEELS_COUNT; ++i)
     {
-        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(Command));  // the only command for each wheel
+        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
     }
 
     /*
@@ -239,18 +231,21 @@ int main(void)
     taskResult = xTaskCreate(vWheelTask, "WheelTaskFL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFL, 3, NULL);
     if (taskResult != pdPASS)
     {
-            goto ERROR;
+        goto ERROR;
     }
+
     taskResult = xTaskCreate(vWheelTask, "WheelTaskFR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFR, 3, NULL);
     if (taskResult != pdPASS)
     {
-            goto ERROR;
+        goto ERROR;
     }
+
     taskResult = xTaskCreate(vWheelTask, "WheelTaskBL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBL, 3, NULL);
     if (taskResult != pdPASS)
     {
-            goto ERROR;
+        goto ERROR;
     }
+
     taskResult = xTaskCreate(vWheelTask, "WheelTaskBR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBR, 3, NULL);
     if (taskResult != pdPASS)
     {
@@ -269,7 +264,8 @@ int main(void)
 ERROR:
     printText("Initialization error\r");
     while(1) ;
-/* USER CODE END */
+
+    /* USER CODE END */
 
     return 0;
 }
@@ -278,73 +274,43 @@ ERROR:
 /* USER CODE BEGIN (4) */
 
 
-CommandHandlerPtr parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
+Command parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
-    CommandHandlerPtr handler;
+    Command parsedCommand;
+    WheelCommand wCommand;
+    // TODO: move to string utils
     if (0 == strncmp(command, "up", 2))
     {
-        handler = &upFunction;
-        return handler;
+        wCommand.Command = CMD_WHEEL_UP;
     }
 
     if (0 == strncmp(command, "down", 4))
     {
-        handler = &downFunction;
-        return handler;
+        wCommand.Command = CMD_WHEEL_DOWN;
     }
 
     if (0 == strncmp(command, "stop", 4))
     {
-        handler = &stopFunction;
-        return handler;
+        wCommand.Command = CMD_WHEEL_STOP;
     }
 
-    return NULL;
+    // fill there arguments
+
+    parsedCommand.wheelCommand = wCommand;
+    parsedCommand.wheelNumber = ALL_WHEELS;
+
+    return parsedCommand;
 }
 
 
-void upFunction(void* args)
+void executeCommand(Command cmd)
 {
     printText("UpFunction \r\n");
-
-    Command cmd;
-    cmd.Command = WHEEL_UP;
-    cmd.argc = 0;
 
     portCHAR i = 0;
     for (; i< WHEELS_COUNT; ++i)
     {
-        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
-    }
-}
-
-void downFunction(void* args)
-{
-    printText("DownFunction \r\n");
-
-    Command cmd;
-    cmd.Command = WHEEL_DOWN;
-    cmd.argc = 0;
-
-    int i = 0;
-    for (; i< WHEELS_COUNT; ++i)
-    {
-        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
-    }
-}
-
-void stopFunction(void* args)
-{
-    printText("StopFunction \r\n");
-
-    Command cmd;
-    cmd.Command = WHEEL_STOP;
-    cmd.argc = 0;
-
-    int i = 0;
-    for (; i< WHEELS_COUNT; ++i)
-    {
-        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd.wheelCommand);  // always returns pdTRUE
     }
 }
 
