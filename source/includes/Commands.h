@@ -11,12 +11,12 @@
 #include "sys_common.h"
 #include "string.h"
 #include "FreeRTOS.h"
+#include "Constants.h"
 
 #define MAX_COMMAND_LEN 10
 #define COMMANDS_LIMIT_COUNT 15
-#define COMMAND_ARGS_LIMIT 0
+#define COMMAND_ARGS_LIMIT 5
 
-#define WHEELS_COUNT 4
 
 // TODO: move to bitmask, but change getting of wheel using these number from the array(!!!)
 typedef enum
@@ -30,6 +30,8 @@ typedef enum
 
 typedef enum
 {
+    UNKNOWN_COMMAND = 0b00000000,
+
     WHEEL_COMMAND_TYPE = 0b10000000,
     CMD_WHEEL_UP   = WHEEL_COMMAND_TYPE | 0b00000001,
     CMD_WHEEL_DOWN = WHEEL_COMMAND_TYPE | 0b00000010,
@@ -49,10 +51,10 @@ typedef struct
 } WheelCommand;
 typedef WheelCommand* CommandPtr;
 
-typedef struct
+/*typedef struct
 {
     WHEEL wheelNumber;
     WheelCommand wheelCommand;
-} Command;
+} Command;*/
 
 #endif /* SOURCE_INCLUDES_COMMANDS_H_ */

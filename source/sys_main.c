@@ -51,6 +51,8 @@
 #include "sys_common.h"
 
 /* USER CODE BEGIN (1) */
+#include "stdlib.h"
+
 #include "gio.h"
 #include "het.h"
 #include "sci.h"
@@ -64,6 +66,9 @@
 #include "os_queue.h"
 
 #include "HetConstants.h"
+#include "StringUtils.h"
+#include "Constants.h"
+
 /* USER CODE END */
 
 
@@ -77,8 +82,8 @@ void printText_ex(const char* text, short maxLen);
 
 typedef void (*CommandHandlerPtr)(void*);
 
-Command parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
-void executeCommand(Command);
+WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
+void executeCommand(WheelCommand);
 
 typedef struct
 {
@@ -135,7 +140,7 @@ void vCommandHandlerTask( void *pvParameters )
             printText_ex(receivedCommand, MAX_COMMAND_LEN);
             printText("\r\n");
 
-            Command command = parseStringCommand(receivedCommand);
+            WheelCommand command = parseStringCommand(receivedCommand);
             executeCommand(command);
         }
         else
@@ -177,7 +182,7 @@ void vWheelTask( void *pvParameters )
                     // already closed
                     break;
                 default:
-                    // TODO: unknown command, log it
+                    printText("Unknown command received");
                     break;
             }
         } // end new command
@@ -274,43 +279,74 @@ ERROR:
 /* USER CODE BEGIN (4) */
 
 
-Command parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
+WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
-    Command parsedCommand;
-    WheelCommand wCommand;
-    // TODO: move to string utils
+    WheelCommand parsedCommand;
+
+    //default values
+    parsedCommand.Command = UNKNOWN_COMMAND;
+
     if (0 == strncmp(command, "up", 2))
     {
-        wCommand.Command = CMD_WHEEL_UP;
+        parsedCommand.Command = CMD_WHEEL_UP;
     }
 
     if (0 == strncmp(command, "down", 4))
     {
-        wCommand.Command = CMD_WHEEL_DOWN;
+        parsedCommand.Command = CMD_WHEEL_DOWN;
     }
 
     if (0 == strncmp(command, "stop", 4))
     {
-        wCommand.Command = CMD_WHEEL_STOP;
+        parsedCommand.Command = CMD_WHEEL_STOP;
     }
 
-    // fill there arguments
+    // parse wheel numer
+    if (parsedCommand.Command & WHEEL_COMMAND_TYPE)
+    {
+        parsedCommand.argv[0] = ALL_WHEELS;  // default value
+        parsedCommand.argc = 1;
 
-    parsedCommand.wheelCommand = wCommand;
-    parsedCommand.wheelNumber = ALL_WHEELS;
+        // get the wheel number
+        char* wheelStr = strchr(command, ' ');
+        if (wheelStr != NULL && isDigits(wheelStr + 1))
+        {
+            portSHORT wheelNo = atoi(wheelStr);
+            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
+            {
+                parsedCommand.argv[0] = wheelNo;
+            }
+        }
+    }
 
     return parsedCommand;
 }
 
-
-void executeCommand(Command cmd)
+void executeCommand(WheelCommand cmd)
 {
-    printText("UpFunction \r\n");
+    printText("Execute command: \r\n");
 
-    portCHAR i = 0;
-    for (; i< WHEELS_COUNT; ++i)
+    if (cmd.Command == UNKNOWN_COMMAND)
     {
-        xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd.wheelCommand);  // always returns pdTRUE
+        printText("Unknown command received");
+        return;
+    }
+
+    if (cmd.Command & WHEEL_COMMAND_TYPE && cmd.argc > 0)
+    {
+        WHEEL wheelNo = (WHEEL)cmd.argv[0];
+        if (wheelNo == ALL_WHEELS)
+        {
+            portCHAR i = 0;
+            for (; i< WHEELS_COUNT; ++i)
+            {
+                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+            }
+        }
+        else
+        {
+            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);
+        }
     }
 }
 
