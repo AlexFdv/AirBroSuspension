@@ -17,7 +17,6 @@
 #define COMMANDS_LIMIT_COUNT 15
 #define COMMAND_ARGS_LIMIT 5
 
-
 // TODO: move to bitmask, but change getting of wheel using these number from the array(!!!)
 typedef enum
 {
@@ -49,12 +48,5 @@ typedef struct
     portSHORT argv[COMMAND_ARGS_LIMIT];
     portCHAR argc;
 } WheelCommand;
-typedef WheelCommand* CommandPtr;
-
-/*typedef struct
-{
-    WHEEL wheelNumber;
-    WheelCommand wheelCommand;
-} Command;*/
 
 #endif /* SOURCE_INCLUDES_COMMANDS_H_ */

@@ -15,12 +15,12 @@ bool isDigits(const char* str)
     if (str == NULL)
         return false;
 
-    int len = strlen(str);
+    size_t len = strlen(str);
 
     if (len == 0)
         return false;
 
-    int i = 0;
+    size_t i = 0;
     while (isdigit(str[i]) && (++i < len));
 
     return (i == len);

@@ -44,6 +44,8 @@
 
 /* USER CODE BEGIN (0) */
 
+#define DUMMY_BREAK if (0) break
+
 /* USER CODE END */
 
 /* Include Files */
@@ -57,6 +59,7 @@
 #include "het.h"
 #include "sci.h"
 
+#include "FEEController.h"
 #include "HetPinsController.h"
 #include "SerialController.h"
 #include "Commands.h"
@@ -71,6 +74,13 @@
 
 /* USER CODE END */
 
+/** @fn void main(void)
+*   @brief Application main function
+*   @note This function is empty by default.
+*
+*   This function is called after startup.
+*   The user can use this function to implement the application.
+*/
 
 /* USER CODE BEGIN (2) */
 
@@ -79,8 +89,6 @@ xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 
 void printText(const char* text);
 void printText_ex(const char* text, short maxLen);
-
-typedef void (*CommandHandlerPtr)(void*);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void executeCommand(WheelCommand);
@@ -121,6 +129,8 @@ void vCommandReceiverTask( void *pvParameters )
         }
 
         taskYIELD();
+
+        DUMMY_BREAK;
     }
     vTaskDelete( NULL );
 }
@@ -147,7 +157,29 @@ void vCommandHandlerTask( void *pvParameters )
         {
             printText("Could not receive a value from the queue.\r\n");
         }
+
+        DUMMY_BREAK;
     }
+    vTaskDelete( NULL );
+}
+
+void vMemTask( void *pvParameters )
+{
+    initializeFEE();
+
+    // TODO: remove, it is only for tests
+    bool flag = true;
+    for( ;; )
+    {
+        if (flag)
+        {
+            writeSyncFEE(1, 123);
+            printText("Wrote value 123 once");
+            flag = false;
+        }
+        DUMMY_BREAK;
+    }
+
     vTaskDelete( NULL );
 }
 
@@ -191,93 +223,11 @@ void vWheelTask( void *pvParameters )
         // if it happens then stop task and wait for a new command
 
         timeOut = portMAX_DELAY;
+
+        DUMMY_BREAK;
     }
     vTaskDelete( NULL );
 }
-
-/* USER CODE END */
-
-int main(void)
-{
-/* USER CODE BEGIN (3) */
-    gioInit();
-    initializeHetPins();
-    initializeSci();
-
-    portBASE_TYPE taskResult = pdFAIL;
-    bool regResult = true;
-
-    commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
-
-    int i = 0;
-    for (; i< WHEELS_COUNT; ++i)
-    {
-        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
-    }
-
-    /*
-     *  Create tasks
-     */
-    taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    /*
-     *  Wheels tasks
-    */
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskFL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFL, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskFR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFR, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskBL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBL, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskBR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBR, 3, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    if (!regResult)
-    {
-        goto ERROR;
-    }
-
-    printText("Controller started\r\n");
-
-    vTaskStartScheduler();
-
-ERROR:
-    printText("Initialization error\r");
-    while(1) ;
-
-    /* USER CODE END */
-
-    return 0;
-}
-
-
-/* USER CODE BEGIN (4) */
-
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
@@ -301,10 +251,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         parsedCommand.Command = CMD_WHEEL_STOP;
     }
 
-    // parse wheel numer
+    // post command parse action: parse wheel number
     if (parsedCommand.Command & WHEEL_COMMAND_TYPE)
     {
-        parsedCommand.argv[0] = ALL_WHEELS;  // default value
+        // default value
+        parsedCommand.argv[0] = ALL_WHEELS;
         parsedCommand.argc = 1;
 
         // get the wheel number
@@ -324,13 +275,13 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 
 void executeCommand(WheelCommand cmd)
 {
-    printText("Execute command: \r\n");
-
     if (cmd.Command == UNKNOWN_COMMAND)
     {
-        printText("Unknown command received");
+        printText("Unknown command received\r\n");
         return;
     }
+
+    printText("Executing entered command...\r\n");
 
     if (cmd.Command & WHEEL_COMMAND_TYPE && cmd.argc > 0)
     {
@@ -348,7 +299,97 @@ void executeCommand(WheelCommand cmd)
             xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);
         }
     }
+
+    if (cmd.Command & MEMORY_COMMAND_TYPE)
+    {
+        // add command to the memory task queue: clear, save, print levels.
+    }
 }
+
+/* USER CODE END */
+
+int main(void)
+{
+/* USER CODE BEGIN (3) */
+    gioInit();
+    initializeHetPins();
+    initializeSci();
+
+    commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
+
+    portSHORT i = 0;
+    for (; i< WHEELS_COUNT; ++i)
+    {
+        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
+    }
+
+    /*
+     *  Create tasks for commands receiving and handling
+     */
+    portBASE_TYPE taskResult = pdFAIL;
+
+    taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    /*
+     *  Wheels tasks
+    */
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskFL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskFR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFR, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskBL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTaskCreate(vWheelTask, "WheelTaskBR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBR, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    /*
+     * Memory task
+     */
+    taskResult = xTaskCreate(vMemTask, "MemTask", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    printText("Controller started\r\n");
+    vTaskStartScheduler();
+
+ERROR:
+    printText("Initialization error\r\n");
+    while(1) DUMMY_BREAK;
+
+    /* USER CODE END */
+
+    return 0;
+}
+
+
+/* USER CODE BEGIN (4) */
 
 //prints the text with terminated null char
 void printText(const char* errorText)

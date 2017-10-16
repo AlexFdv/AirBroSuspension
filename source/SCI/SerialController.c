@@ -5,6 +5,7 @@
  *      Author: Alex
  */
 #include "sci.h"
+#include "os_portmacro.h"
 #include "SerialController.h"
 
 void initializeSci()
@@ -12,7 +13,7 @@ void initializeSci()
     sciInit();
 }
 
-void sciDisplayData(const char *text, short length)
+void sciDisplayData(const portCHAR *text, portSHORT length)
 {
     sciBASE_t *sciReg = scilinREG;
     while (length--)
@@ -24,18 +25,18 @@ void sciDisplayData(const char *text, short length)
     };
 }
 
-void sciReceiveData(char *receivedtext, short *receivedLength, short maxLength)
+void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
 {
     const uint32 STOP_CHAR = 0x0D;
 
-    short receivedSize = 0;
+    portSHORT receivedSize = 0;
     uint32 ch = 0x00;
     do
     {
         ch = sciReceiveByte(scilinREG);
         if (ch == STOP_CHAR)
             break;
-        receivedtext[receivedSize] = (char)ch;
+        receivedText[receivedSize] = (portCHAR)ch;
         ++receivedSize;
     } while (receivedSize < maxLength);
 
