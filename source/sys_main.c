@@ -183,46 +183,73 @@ void vMemTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
+inline void stopWheel(WheelPinsStruct wheelPins)
+{
+    closePin(wheelPins.upPin);
+    closePin(wheelPins.downPin);
+}
+
 void vWheelTask( void *pvParameters )
 {
     portBASE_TYPE xStatus;
 
+    TickType_t timeOut = portMAX_DELAY;
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
-    TickType_t timeOut = portMAX_DELAY;
+    TickType_t startTime = 0;
+
+    WheelCommand cmd;
     for( ;; )
     {
-        WheelCommand cmd;
         xStatus = xQueueReceive(wheelsCommandsQueueHandles[wheelPins.wheel], &cmd, timeOut);
-        timeOut = 0;
 
-        // new command received
+        /*
+        * Check for a new command
+        */
         if (xStatus == pdTRUE)
         {
-            //close pins before a new command execution
-            closePin(wheelPins.upPin);
-            closePin(wheelPins.downPin);
-
             switch (cmd.Command) {
                 case CMD_WHEEL_UP:
+                    stopWheel(wheelPins);
                     openPin(wheelPins.upPin);
+                    startTime = xTaskGetTickCount();
                     break;
                 case CMD_WHEEL_DOWN:
-                     openPin(wheelPins.downPin);
-                     break;
+                    stopWheel(wheelPins);
+                    openPin(wheelPins.downPin);
+                    startTime = xTaskGetTickCount();
+                    break;
                 case CMD_WHEEL_STOP:
-                    // already closed
-                    break;
+                    stopWheel(wheelPins);
+                    timeOut = portMAX_DELAY; // block task next time to wait for a new command
+                    continue;
                 default:
+                    // do nothing and goto cycle start
                     printText("Unknown command received");
-                    break;
+                    continue;
             }
         } // end new command
 
+        /*
+         * Check wheel level
+         */
+
         // here we should check that we do not exceeded a needed level
         // if it happens then stop task and wait for a new command
+        // if not, continue cycle execution
 
-        timeOut = portMAX_DELAY;
+        /*
+         * Check timer
+         */
+        portCHAR elapsedTimeSec = (xTaskGetTickCount() - startTime)/configTICK_RATE_HZ;
+        if (elapsedTimeSec >= WHEEL_TIMER_TIMEOUT_SEC)
+        {
+            stopWheel(wheelPins);
+            timeOut = portMAX_DELAY;
+            continue;
+        }
+
+        timeOut = 0;   // don't block task on queue next time and execute checks.
 
         DUMMY_BREAK;
     }
