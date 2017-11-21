@@ -26,6 +26,7 @@
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS110 USB Debug Probe/CortexR4" value="C:/Users\Alex\workspace_herkules\AirBroSuspensionFreeRTOS\Debug\AirBroSuspensionFreeRTOS.out"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS110 USB Debug Probe_0/CortexR4" value="C:/Users\Alex\workspace_herkules\AirBroSuspensionFreeRTOS\Debug\AirBroSuspensionFreeRTOS.out"/>
 <mapAttribute key="com.ti.ccstudio.debug.ui.displayFormats">
+<mapEntry key="Texas Instruments XDS110 USB Debug Probe/CortexR4@##separator##@0" value="32-Bit Hex - TI Style"/>
 <mapEntry key="Texas Instruments XDS110 USB Debug Probe_0/CortexR4@##separator##@0" value="64-Bit Hex - TI Style"/>
 </mapAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">

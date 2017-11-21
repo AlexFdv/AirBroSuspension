@@ -41,7 +41,28 @@ void formatFEE()
     waitForExecution();
 }
 
-void writeSyncFEE(unsigned int blockNumber, unsigned char value)
+// try use async functions
+void writeSyncFEE(const void* value, unsigned int len)
 {
-    TI_Fee_WriteSync(blockNumber, &value);
+    const unsigned int blockNumber = 1;
+    uint8 SpecialRamBlock[50] = {0};
+
+    memcpy(&SpecialRamBlock[0], value, len);
+
+    TI_Fee_WriteSync(blockNumber, &SpecialRamBlock[0]);
+}
+
+void readSyncFEE(void* value, unsigned int len)
+{
+    const unsigned int blockNumber = 1;
+
+    // Fee_BlockConfiguration[0].FeeBlockSize
+    unsigned char read_data[50] = {0};
+    unsigned int blockOffset = 0;
+
+    TI_Fee_ReadSync(blockNumber, blockOffset, &read_data[0], len);
+
+    memcpy(value, &read_data[0], len);
+
+    return 0;
 }

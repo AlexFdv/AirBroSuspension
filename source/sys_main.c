@@ -1,7 +1,7 @@
 /** @file sys_main.c 
 *   @brief Application main file
-*   @date 08-Feb-2017
-*   @version 04.06.01
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 *   This file contains an empty main function,
 *   which can be used for the application.
@@ -68,6 +68,7 @@
 #include "os_task.h"
 #include "os_queue.h"
 
+#include "Levels.h"
 #include "HetConstants.h"
 #include "StringUtils.h"
 #include "Constants.h"
@@ -83,6 +84,11 @@
 */
 
 /* USER CODE BEGIN (2) */
+
+#pragma SWI_ALIAS(swiSwitchToMode, 1)
+
+// Mode = 0x10 for user and 0x1F for system mode
+extern void swiSwitchToMode ( uint32 mode );
 
 xQueueHandle commandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
@@ -165,7 +171,10 @@ void vCommandHandlerTask( void *pvParameters )
 
 void vMemTask( void *pvParameters )
 {
+    swiSwitchToMode(0x1F);
+
     initializeFEE();
+    formatFEE();
 
     // TODO: remove, it is only for tests
     bool flag = true;
@@ -173,8 +182,11 @@ void vMemTask( void *pvParameters )
     {
         if (flag)
         {
-            writeSyncFEE(1, 123);
-            printText("Wrote value 123 once");
+            LevelValues values = {42, 33, 24, 15};
+            writeSyncFEE((void*)&values, sizeof(values));
+
+            LevelValues readValues = {0, 0, 0, 0};
+            readSyncFEE((void*)&readValues, sizeof(readValues));
             flag = false;
         }
         DUMMY_BREAK;

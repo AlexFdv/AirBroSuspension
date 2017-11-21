@@ -52,7 +52,9 @@
  *                                                                   space.
  * 01.19.01       12Augu2016   Vishwanath Reddy     SDOCM00122543    Bugfix for FEE reading from unimplemented memory
  *                                                                   space.
- * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    Update version history.  
+ * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    Update version history.
+ * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Removed Block Size interpretation for Blocks that 
+ *                                                                   are not Valid, Invalid or Empty. 
  *********************************************************************************************************************/
 
 /*
@@ -144,6 +146,7 @@ boolean Fee_bSingleBitError;
 	uint8 * u8WriteDataptrTemp=0U;
 	uint8 u8loopindex = 0U;
 
+	TI_Fee_bIsMainFunctionCalled = TRUE;
 	while(u8EEPIndex<TI_FEE_NUMBER_OF_EEPS)
 	{
 		/* Write the remaining of the VS header */
@@ -605,6 +608,7 @@ boolean Fee_bSingleBitError;
 	TI_Fee_oStatusWord_Global.Fee_u16StatusWord = ((TI_Fee_oStatusWord[0].Fee_u16StatusWord) |
 			 									   (TI_Fee_oStatusWord[1].Fee_u16StatusWord));
 	#endif	
+	TI_Fee_bIsMainFunctionCalled = FALSE;
 }
 /*SAFETYMCUSW 580 S MR:1.1 <APPROVED> "Reason - This is the format to use for specifying memorysections."*/
 #define FEE_STOP_SEC_CODE

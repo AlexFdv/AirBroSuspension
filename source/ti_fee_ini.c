@@ -54,17 +54,19 @@
  *                                                  SDOCM00114104    Change ALL 1's OK check condition.
  *                                                  SDOCM00114423	 Add new variable TI_Fee_MaxSectors and 
  *                                                                   changes for unification of Archer/Champion.
-* 01.18.00		  12Oct2015    Vishwanath Reddy     SDOCM00119455    Update version history. 
-* 01.18.01		  17Nov2015    Vishwanath Reddy     SDOCM00120161    Update version history.
-* 01.18.02		  05Feb2016    Vishwanath Reddy     SDOCM00121158    Update version history.
-* 01.18.03        30June2016   Vishwanath Reddy     SDOCM00122388    Update patch version TI_FEE_SW_PATCH_VERSION.
-*                                                                    Changes related to supporting of configuring
-*                                                                    data set numbers instead of block numbers.
-*                                                                    TI_FEE_FLASH_CRC_ENABLE is renamed to 
-*                                                                    TI_FEE_FLASH_CHECKSUM_ENABLE.    
-* 01.19.00        08Augu2016   Vishwanath Reddy     SDOCM00122592    Update patch version TI_FEE_MINOR_VERSION.
-* 01.19.01        12Augu2016   Vishwanath Reddy     SDOCM00122543    Update patch version TI_FEE_MINOR_VERSION.
-* 01.19.02        25Janu2017   Vishwanath Reddy     SDOCM00122832    Update patch version TI_FEE_MINOR_VERSION.
+ * 01.18.00		  12Oct2015    Vishwanath Reddy     SDOCM00119455    Update version history. 
+ * 01.18.01		  17Nov2015    Vishwanath Reddy     SDOCM00120161    Update version history.
+ * 01.18.02		  05Feb2016    Vishwanath Reddy     SDOCM00121158    Update version history.
+ * 01.18.03       30June2016   Vishwanath Reddy     SDOCM00122388    Update patch version TI_FEE_SW_PATCH_VERSION.
+ *                                                                   Changes related to supporting of configuring
+ *                                                                   data set numbers instead of block numbers.
+ *                                                                   TI_FEE_FLASH_CRC_ENABLE is renamed to 
+ *                                                                   TI_FEE_FLASH_CHECKSUM_ENABLE.    
+ * 01.19.00       08Augu2016   Vishwanath Reddy     SDOCM00122592    Update patch version TI_FEE_MINOR_VERSION.
+ * 01.19.01       12Augu2016   Vishwanath Reddy     SDOCM00122543    Update patch version TI_FEE_MINOR_VERSION.
+ * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    Update patch version TI_FEE_MINOR_VERSION.
+ * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Removed Block Size interpretation for Blocks that 
+ *                                                                   are not Valid, Invalid or Empty.
  *********************************************************************************************************************/
 /* Total Number of Requirements : FEE : 104 */ 
 
@@ -128,7 +130,7 @@
 #if (TI_FEE_SW_MINOR_VERSION != 19U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_MINOR_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_MINOR_VERSION */
-#if (TI_FEE_SW_PATCH_VERSION != 2U)
+#if (TI_FEE_SW_PATCH_VERSION != 3U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_PATCH_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_PATCH_VERSION */
 
@@ -165,6 +167,7 @@ uint8  TI_Fee_u8DeviceIndex;
 uint32 TI_Fee_u32ActCpyVS;
 uint8  TI_Fee_u8ErrEraseVS;
 boolean TI_Fee_bEraseSuspended;
+boolean TI_Fee_bIsMainFunctionCalled;
 TI_Fee_StatusWordType_UN TI_Fee_oStatusWord[TI_FEE_NUMBER_OF_EEPS];
 Fapi_FlashStatusWordType TI_FlashStatusWord;
 #if (TI_FEE_NUMBER_OF_UNCONFIGUREDBLOCKSTOCOPY != 0U)
@@ -226,6 +229,7 @@ void TI_Fee_Init(void)
 	TI_Fee_u32FletcherChecksum = 0xFFFFFFFFU;
 	#endif
 	TI_Fee_bEraseSuspended = FALSE;
+	TI_Fee_bIsMainFunctionCalled = FALSE;
 	
 	#if (TI_FEE_GENERATE_DEVICEANDVIRTUALSECTORSTRUC == STD_ON)	
 	if((((TI_FEE_GET_DEVICE_TYPE) & 0xFFF00000U) >> 20U) > 73U)

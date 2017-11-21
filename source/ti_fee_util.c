@@ -102,7 +102,9 @@
  *                                                                   TI_FeeInternal_WriteDataF021 updated to check
  *                                                                   if copy source address is within Bank7 address.
  * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    In API TI_Fee_ErrorRecovery, added polling for
- *                                                                   flash status before calling TI_Fee_Init.  
+ *                                                                   flash status before calling TI_Fee_Init.
+ * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Removed Block Size interpretaion for Blocks that 
+ *                                                                   are not Valid, Invalid or Empty. 
  *********************************************************************************************************************/
 
 /*
@@ -1773,8 +1775,7 @@ void TI_FeeInternal_UpdateBlockOffsetArray(uint8 u8EEPIndex, boolean bActCpyVS, 
 					u32BlockStartAddress = TI_Fee_GlobalVariables[u8EEPIndex].Fee_oBlankFailAddress;
 					/* Since block header is eight bytes, and blank check check's returns address where it finds
 					   non F's, we have to decrement address by 8 and start checking for block status */
-					u32BlockStartAddress -= 8U;
-					u32BlockStartAddress = TI_FeeInternal_AlignAddressForECC(u32BlockStartAddress);
+					u32BlockStartAddress = u32BlockStartAddress & 0xFFFFFFF8U;
 					u32BlockStartAddresstemp = u32BlockStartAddress;
 				}
 				else
@@ -1800,54 +1801,28 @@ void TI_FeeInternal_UpdateBlockOffsetArray(uint8 u8EEPIndex, boolean bActCpyVS, 
 				if(2U==u8cnt)
 				{
 					/* There is a block with valid block header after u32BlockStartAddress+8U. If the counter is two, 
-					   this means code is at same memory location. Advance by 16.*/
-					u32BlockStartAddress += 16U;
+					   this means code is at same memory location. Advance by 8.*/
+					u32BlockStartAddress += 8U;
 					u8cnt=0U;
 				}
 			}
 		}
-		else if(((au32BlockStatus[0] == StartProgramBlockLo) && 
-		         (au32BlockStatus[1] == StartProgramBlockHi)) && 
-			     (u16BlockSize == 0x0U))
-		{								
 			/* If previously only 8bytes of start program block status were written, check if there are
 			   any blocks adjacent to it immediately. */
 			/* Read block status from block header */
-			u32BlockStartAddress += 0x10U;
-			au32BlockAddress[0]  =  u32BlockStartAddress;
-			au32BlockAddress[1]  =  au32BlockAddress[0]+4U;
 			/*SAFETYMCUSW 94 S MR:11.1,11.2,11.4 <APPROVED> "Reason -  Casting is required here."*/
 			/*SAFETYMCUSW 95 S MR:11.1,11.4 <APPROVED> "Reason -  Casting is required here."*/
-			ppu32ReadHeader = (uint32 **)&au32BlockAddress[0];
-			au32BlockStatus[0] = **ppu32ReadHeader;
 			/*SAFETYMCUSW 94 S MR:11.1,11.2,11.4 <APPROVED> "Reason -  Casting is required here."*/
 			/*SAFETYMCUSW 95 S MR:11.1,11.4 <APPROVED> "Reason -  Casting is required here."*/
-			ppu32ReadHeader=(uint32 **)&au32BlockAddress[1];
-			au32BlockStatus[1] = **ppu32ReadHeader;
 
-			if(((au32BlockStatus[0] == InvalidBlockLo) && (au32BlockStatus[1] == InvalidBlockHi)) ||
-	           ((au32BlockStatus[0] == CorruptBlockLo) && (au32BlockStatus[1] == CorruptBlockHi)) ||
-	           ((au32BlockStatus[0] == ValidBlockLo) && (au32BlockStatus[1] == ValidBlockHi)) ||
-	           ((au32BlockStatus[0] == StartProgramBlockLo) && (au32BlockStatus[1] == StartProgramBlockHi))
-			)
-			{
-				u32BlockStartAddress = TI_FeeInternal_AlignAddressForECC(u32BlockStartAddress);
-				u16BlockSize = 0U;
 				/*SAFETYMCUSW 32 S MR:14.5 <APPROVED> "Reason -  Removal of this statement results in lot of 
 				  code changes."*/
-				continue;
-			}
-		}
 		else 
 		{
-			/* If block size if not equal to 0xFFFF, that means a block is present which is not configured
-			 (and TI_FEE_NUMBER_OF_UNCONFIGUREDBLOCKSTOCOPY = 0U) /corrupted. */
-			if(0xFFFFU == u16BlockSize)
-			{
-				u16BlockSize+=TI_FEE_BLOCK_OVERHEAD;			
-			}	
+		    /* Header is not Valid, Invalid or Empty hence skip by 8 Bytes and look for next Header */
+		    u16BlockSize = 8U;
 		}
-		/* Jump to next block */				
+		/* Jump to next block */						
 		u32BlockStartAddress+=u16BlockSize;
 		u32BlockStartAddress = TI_FeeInternal_AlignAddressForECC(u32BlockStartAddress);		
 		/* If during scanning of VS, if the block address is almost at the end of VS(only 32 bytes left in VS), 

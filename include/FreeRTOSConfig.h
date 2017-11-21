@@ -88,6 +88,8 @@
  * See http://www.freertos.org/a00110.html.
  *----------------------------------------------------------*/
 
+/* USER CODE BEGIN (0) */
+/* USER CODE END */
 #define configUSE_PREEMPTION		  1
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	1
 #define configUSE_FPU							1
@@ -105,6 +107,17 @@
 #define configGENERATE_RUN_TIME_STATS 0
 #define configUSE_MALLOC_FAILED_HOOK  0
 
+/* USER CODE BEGIN (1) */
+/* USER CODE END */
+
+#define configSUPPORT_STATIC_ALLOCATION			0
+#define configSUPPORT_DYNAMIC_ALLOCATION		1
+
+#define configNUM_THREAD_LOCAL_STORAGE_POINTERS 1
+#define configUSE_TICKLESS_IDLE					1
+
+/* USER CODE BEGIN (2) */
+/* USER CODE END */
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES 		    0
@@ -123,6 +136,9 @@
 #define configTIMER_QUEUE_LENGTH		0
 #define configTIMER_TASK_STACK_DEPTH	( 0 )
 
+/* USER CODE BEGIN (3) */
+/* USER CODE END */
+
 /* Set the following definitions to 1 to include the API function, or zero to exclude the API function. */
 #define INCLUDE_vTaskPrioritySet		    1
 #define INCLUDE_uxTaskPriorityGet		    1
@@ -134,9 +150,19 @@
 #define INCLUDE_vTaskDelay				    1
 #define INCLUDE_xTaskGetSchedulerState      1
 #define INCLUDE_uxTaskGetStackHighWaterMark 1
+#define INCLUDE_xTaskAbortDelay             1
+#define INCLUDE_eTaskGetState               1
+#define INCLUDE_xTaskGetHandle              1
+#define INCLUDE_xTaskGetIdleTaskHandle      1
+
+/* USER CODE BEGIN (4) */
+/* USER CODE END */
 
 
 /* debug ASSERT */
 #define configASSERT( x ) if( ( x ) == pdFALSE ) { taskDISABLE_INTERRUPTS(); for( ;; ); }
+
+/* USER CODE BEGIN (5) */
+/* USER CODE END */
 
 #endif /* FREERTOS_CONFIG_H */

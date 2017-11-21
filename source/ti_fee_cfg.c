@@ -1,7 +1,7 @@
 /** @file ti_fee_cfg.c 
 *   @brief FEE Driver Implementation File
-*   @date 08-Feb-2017
-*   @version 04.06.01
+*   @date 07-July-2017
+*   @version 04.07.00
 *
 *   This is the FEE configuration parameter file.
 */
@@ -104,7 +104,7 @@ const Fee_BlockConfigType Fee_BlockConfiguration[TI_FEE_NUMBER_OF_BLOCKS] =
         /*      Block 1 */
         {
                /* Block number                          */     1U, 
-               /* Block size                            */     100U,
+               /* Block size                            */     50U,
                /* Block immediate data used             */     TRUE,			   
                /* Number of write cycles                */     0x8U,
                /* Device Index                          */     0x00000000U,
