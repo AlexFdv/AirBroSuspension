@@ -18,7 +18,4 @@ typedef struct _LevelValues
     portSHORT br_wheel;
 } LevelValues;
 
-LevelValues Levels[WHEELS_COUNT];
-
-
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

@@ -9,6 +9,8 @@
 
 #include "ti_fee.h"
 
+#define BLOCK_SIZE 24
+
 void delay(void)
 {
     unsigned int dummycnt=0x0000FFU;
@@ -42,27 +44,13 @@ void formatFEE()
 }
 
 // try use async functions
-void writeSyncFEE(const void* value, unsigned int len)
+void writeSyncFEE(const unsigned int blockNumber, const void* value)
 {
-    const unsigned int blockNumber = 1;
-    uint8 SpecialRamBlock[50] = {0};
-
-    memcpy(&SpecialRamBlock[0], value, len);
-
-    TI_Fee_WriteSync(blockNumber, &SpecialRamBlock[0]);
+    TI_Fee_WriteSync(blockNumber, value);
 }
 
-void readSyncFEE(void* value, unsigned int len)
+void readSyncFEE(const unsigned int blockNumber, void* value, unsigned int len)
 {
-    const unsigned int blockNumber = 1;
-
-    // Fee_BlockConfiguration[0].FeeBlockSize
-    unsigned char read_data[50] = {0};
     unsigned int blockOffset = 0;
-
-    TI_Fee_ReadSync(blockNumber, blockOffset, &read_data[0], len);
-
-    memcpy(value, &read_data[0], len);
-
-    return 0;
+    TI_Fee_ReadSync(blockNumber, blockOffset, value, len);
 }

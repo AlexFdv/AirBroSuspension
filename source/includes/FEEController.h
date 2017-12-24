@@ -10,7 +10,7 @@
 
 void initializeFEE();
 void formatFEE();
-void writeSyncFEE(const void* value, unsigned int len);
-void readSyncFEE(void* value, unsigned int len);
+void writeSyncFEE(const unsigned int blockNumber, const void* value);
+void readSyncFEE(const unsigned int blockNumber, void* value, unsigned int len);
 
 #endif /* SOURCE_INCLUDES_FEECONTROLLER_H_ */

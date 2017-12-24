@@ -91,6 +91,7 @@
 extern void swiSwitchToMode ( uint32 mode );
 
 xQueueHandle commandsQueueHandle;
+xQueueHandle memoryCommandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 
 void printText(const char* text);
@@ -169,26 +170,145 @@ void vCommandHandlerTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
+
+WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
+{
+    WheelCommand parsedCommand;
+
+    //default values
+    parsedCommand.Command = UNKNOWN_COMMAND;
+
+    // parse wheel command type
+    if (0 == strncmp(command, "up", 2))
+    {
+        parsedCommand.Command = CMD_WHEEL_UP;
+    }
+
+    // parse wheel command type
+    if (0 == strncmp(command, "down", 4))
+    {
+        parsedCommand.Command = CMD_WHEEL_DOWN;
+    }
+
+    // parse wheel command type
+    if (0 == strncmp(command, "stop", 4))
+    {
+        parsedCommand.Command = CMD_WHEEL_STOP;
+    }
+
+    // additional action: parse wheel number
+    if (parsedCommand.Command & WHEEL_COMMAND_TYPE == WHEEL_COMMAND_TYPE)
+    {
+        // default value
+        parsedCommand.argv[0] = ALL_WHEELS;
+        parsedCommand.argc = 1;
+
+        // get the wheel number
+        char* wheelStr = strchr(command, ' ');
+        if (wheelStr != NULL && isDigits(wheelStr + 1))
+        {
+            portSHORT wheelNo = atoi(wheelStr);
+            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
+            {
+                parsedCommand.argv[0] = wheelNo;
+            }
+        }
+    }
+
+    if (0 == strncmp(command, "lsave", 5))
+    {
+        parsedCommand.Command = CMD_MEMORY_SAVE;
+        parsedCommand.argv[0] = 1;  // block number
+        // add to argv levels from the ADC
+    }
+
+    if (0 == strncmp(command, "lget", 4))
+    {
+        parsedCommand.Command = CMD_MEMORY_GET;
+        parsedCommand.argv[0] = 1;  // block number
+    }
+
+    return parsedCommand;
+}
+
+void executeCommand(WheelCommand cmd)
+{
+    if (cmd.Command == UNKNOWN_COMMAND)
+    {
+        printText("Unknown command received\r\n");
+        return;
+    }
+
+    printText("Executing entered command...\r\n");
+
+    if (cmd.Command & WHEEL_COMMAND_TYPE && cmd.argc > 0)
+    {
+        WHEEL wheelNo = (WHEEL)cmd.argv[0];
+        if (wheelNo == ALL_WHEELS)
+        {
+            portCHAR i = 0;
+            for (; i< WHEELS_COUNT; ++i)
+            {
+                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+            }
+        }
+        else
+        {
+            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);
+        }
+    }
+
+    if (cmd.Command & MEMORY_COMMAND_TYPE)
+    {
+        // add command to the memory task queue: clear, save, print levels.
+
+        portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
+        if (xStatus != pdTRUE)
+        {
+            printText("Could not add memory command to the queue (it is full).\r\n");
+        }
+    }
+}
+
 void vMemTask( void *pvParameters )
 {
     swiSwitchToMode(0x1F);
 
     initializeFEE();
-    formatFEE();
+    //formatFEE();
 
-    // TODO: remove, it is only for tests
-    bool flag = true;
+    TickType_t timeOut = portMAX_DELAY;
+    WheelCommand cmd;
     for( ;; )
     {
-        if (flag)
-        {
-            LevelValues values = {42, 33, 24, 15};
-            writeSyncFEE((void*)&values, sizeof(values));
+        portBASE_TYPE xStatus = xQueueReceive(memoryCommandsQueueHandle, &cmd, timeOut);
 
-            LevelValues readValues = {0, 0, 0, 0};
-            readSyncFEE((void*)&readValues, sizeof(readValues));
-            flag = false;
+        // TODO: check it !!!
+        if (cmd.Command == CMD_MEMORY_GET)
+        {
+            swiSwitchToMode(0x1F);
+
+            portSHORT blockNumber = 1;
+            portSHORT levelNumber = cmd.argv[0];
+
+            LevelValues levels[LEVELS_NUMBER] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
+            readSyncFEE(blockNumber, (void*)&levels, sizeof(levels));
         }
+
+        // TODO: check it !!!
+        if (cmd.Command == CMD_MEMORY_SAVE)
+        {
+            portSHORT blockNumber = 1;
+            portSHORT levelNumber = cmd.argv[0];
+            LevelValues levels[LEVELS_NUMBER] = {{1,1,1,1}, {2,2,2,2}, {3,3,3,3}};
+            writeSyncFEE(blockNumber, (void*)&levels);
+        }
+
+        if (cmd.Command == CMD_MEMORY_CLEAR)
+        {
+
+        }
+
         DUMMY_BREAK;
     }
 
@@ -268,82 +388,6 @@ void vWheelTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
-WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
-{
-    WheelCommand parsedCommand;
-
-    //default values
-    parsedCommand.Command = UNKNOWN_COMMAND;
-
-    if (0 == strncmp(command, "up", 2))
-    {
-        parsedCommand.Command = CMD_WHEEL_UP;
-    }
-
-    if (0 == strncmp(command, "down", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_DOWN;
-    }
-
-    if (0 == strncmp(command, "stop", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_STOP;
-    }
-
-    // post command parse action: parse wheel number
-    if (parsedCommand.Command & WHEEL_COMMAND_TYPE)
-    {
-        // default value
-        parsedCommand.argv[0] = ALL_WHEELS;
-        parsedCommand.argc = 1;
-
-        // get the wheel number
-        char* wheelStr = strchr(command, ' ');
-        if (wheelStr != NULL && isDigits(wheelStr + 1))
-        {
-            portSHORT wheelNo = atoi(wheelStr);
-            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
-            {
-                parsedCommand.argv[0] = wheelNo;
-            }
-        }
-    }
-
-    return parsedCommand;
-}
-
-void executeCommand(WheelCommand cmd)
-{
-    if (cmd.Command == UNKNOWN_COMMAND)
-    {
-        printText("Unknown command received\r\n");
-        return;
-    }
-
-    printText("Executing entered command...\r\n");
-
-    if (cmd.Command & WHEEL_COMMAND_TYPE && cmd.argc > 0)
-    {
-        WHEEL wheelNo = (WHEEL)cmd.argv[0];
-        if (wheelNo == ALL_WHEELS)
-        {
-            portCHAR i = 0;
-            for (; i< WHEELS_COUNT; ++i)
-            {
-                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
-            }
-        }
-        else
-        {
-            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);
-        }
-    }
-
-    if (cmd.Command & MEMORY_COMMAND_TYPE)
-    {
-        // add command to the memory task queue: clear, save, print levels.
-    }
-}
 
 /* USER CODE END */
 
@@ -361,6 +405,8 @@ int main(void)
     {
         wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
     }
+
+    memoryCommandsQueueHandle = xQueueCreate(3, sizeof(WheelCommand));
 
     /*
      *  Create tasks for commands receiving and handling
