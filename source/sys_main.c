@@ -54,6 +54,7 @@
 
 /* USER CODE BEGIN (1) */
 #include "stdlib.h"
+#include "stdio.h"
 
 #include "gio.h"
 #include "het.h"
@@ -98,7 +99,7 @@ void printText(const char* text);
 void printText_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
-void executeCommand(WheelCommand);
+void addCommandToQueue(WheelCommand);
 
 typedef struct
 {
@@ -112,6 +113,7 @@ WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCH
 WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
 WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
 WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
+
 
 /*
  * Tasks implementation
@@ -158,7 +160,7 @@ void vCommandHandlerTask( void *pvParameters )
             printText("\r\n");
 
             WheelCommand command = parseStringCommand(receivedCommand);
-            executeCommand(command);
+            addCommandToQueue(command);
         }
         else
         {
@@ -173,10 +175,12 @@ void vCommandHandlerTask( void *pvParameters )
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
-    WheelCommand parsedCommand;
-
-    //default values
-    parsedCommand.Command = UNKNOWN_COMMAND;
+    WheelCommand parsedCommand =
+    {
+         UNKNOWN_COMMAND,
+         {0},
+         0
+    };
 
     // parse wheel command type
     if (0 == strncmp(command, "up", 2))
@@ -218,20 +222,38 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     if (0 == strncmp(command, "lsave", 5))
     {
         parsedCommand.Command = CMD_MEMORY_SAVE;
-        parsedCommand.argv[0] = 1;  // block number
-        // add to argv levels from the ADC
+
+        char* levelNumberStr = strchr(command, ' ');
+        if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
+        {
+            portSHORT levelNo = atoi(levelNumberStr);
+            if (levelNo >= 0 && levelNo < LEVELS_NUMBER)
+            {
+                parsedCommand.argc = 1;
+                parsedCommand.argv[0] = levelNo;
+            }
+        }
     }
 
     if (0 == strncmp(command, "lget", 4))
     {
         parsedCommand.Command = CMD_MEMORY_GET;
-        parsedCommand.argv[0] = 1;  // block number
+        char* levelNumberStr = strchr(command, ' ');
+        if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
+        {
+            portSHORT levelNo = atoi(levelNumberStr);
+            if (levelNo >= 0 && levelNo < LEVELS_NUMBER)
+            {
+                parsedCommand.argc = 1;
+                parsedCommand.argv[0] = levelNo;
+            }
+        }
     }
 
     return parsedCommand;
 }
 
-void executeCommand(WheelCommand cmd)
+void addCommandToQueue(WheelCommand cmd)
 {
     if (cmd.Command == UNKNOWN_COMMAND)
     {
@@ -254,7 +276,7 @@ void executeCommand(WheelCommand cmd)
         }
         else
         {
-            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);
+            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
         }
     }
 
@@ -275,7 +297,6 @@ void vMemTask( void *pvParameters )
     swiSwitchToMode(0x1F);
 
     initializeFEE();
-    //formatFEE();
 
     TickType_t timeOut = portMAX_DELAY;
     WheelCommand cmd;
@@ -283,30 +304,44 @@ void vMemTask( void *pvParameters )
     {
         portBASE_TYPE xStatus = xQueueReceive(memoryCommandsQueueHandle, &cmd, timeOut);
 
-        // TODO: check it !!!
         if (cmd.Command == CMD_MEMORY_GET)
         {
-            swiSwitchToMode(0x1F);
+            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
+            LevelValues levels[LEVELS_NUMBER] = {0}; // BLOCK_SIZE / sizeof(levels)
+            readLevels((void*)&levels);
 
-            portSHORT blockNumber = 1;
-            portSHORT levelNumber = cmd.argv[0];
+            // printing. Remove later
+            LevelValues level = levels[levelNumber];
+            int n = 0;
+            char str[50] = {0};
+            n = snprintf(str, 50, "%d %d %d %d", level.fl_wheel, level.fr_wheel, level.bl_wheel, level.br_wheel);
+            printText_ex(str, n);
+            // end printing
 
-            LevelValues levels[LEVELS_NUMBER] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
-            readSyncFEE(blockNumber, (void*)&levels, sizeof(levels));
         }
 
-        // TODO: check it !!!
         if (cmd.Command == CMD_MEMORY_SAVE)
         {
-            portSHORT blockNumber = 1;
-            portSHORT levelNumber = cmd.argv[0];
-            LevelValues levels[LEVELS_NUMBER] = {{1,1,1,1}, {2,2,2,2}, {3,3,3,3}};
-            writeSyncFEE(blockNumber, (void*)&levels);
+            if (cmd.argc == 0)
+            {
+                printText("Provide a level number.");
+            }
+            else
+            {
+                portSHORT levelNumber = cmd.argv[0];
+                LevelValues levels[LEVELS_NUMBER] = {0};
+                readLevels((void*)&levels);
+
+                //
+                // get ADC values and save them
+                //
+                writeLevels((void*)&levels);
+            }
         }
 
         if (cmd.Command == CMD_MEMORY_CLEAR)
         {
-
+            formatFEE();
         }
 
         DUMMY_BREAK;

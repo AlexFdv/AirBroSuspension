@@ -9,8 +9,6 @@
 
 #include "ti_fee.h"
 
-#define BLOCK_SIZE 24
-
 void delay(void)
 {
     unsigned int dummycnt=0x0000FFU;
@@ -43,13 +41,23 @@ void formatFEE()
     waitForExecution();
 }
 
-// try use async functions
-void writeSyncFEE(const unsigned int blockNumber, const void* value)
+void writeLevels(void* levels)
 {
-    TI_Fee_WriteSync(blockNumber, value);
+    writeSyncFEE(LEVELS_BLOCK_NUMBER, levels);
 }
 
-void readSyncFEE(const unsigned int blockNumber, void* value, unsigned int len)
+void readLevels(void* levels)
+{
+    readSyncFEE(LEVELS_BLOCK_NUMBER, levels, LEVELS_BLOCK_SIZE);
+}
+
+// TODO: try use async functions
+void writeSyncFEE(const unsigned int blockNumber, const void* value)
+{
+    TI_Fee_WriteSync(LEVELS_BLOCK_NUMBER, value);
+}
+
+void readSyncFEE(const unsigned int blockNumber, void* value, const unsigned int len)
 {
     unsigned int blockOffset = 0;
     TI_Fee_ReadSync(blockNumber, blockOffset, value, len);
