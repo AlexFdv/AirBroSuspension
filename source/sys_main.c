@@ -59,7 +59,9 @@
 #include "gio.h"
 #include "het.h"
 #include "sci.h"
+#include "adc.h"
 
+#include "ADCController.h"
 #include "FEEController.h"
 #include "HetPinsController.h"
 #include "SerialController.h"
@@ -94,6 +96,7 @@ extern void swiSwitchToMode ( uint32 mode );
 xQueueHandle commandsQueueHandle;
 xQueueHandle memoryCommandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
+xQueueHandle wheelsLevelsQueueHandles[WHEELS_COUNT];
 
 void printText(const char* text);
 void printText_ex(const char* text, short maxLen);
@@ -201,7 +204,7 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     }
 
     // additional action: parse wheel number
-    if (parsedCommand.Command & WHEEL_COMMAND_TYPE == WHEEL_COMMAND_TYPE)
+    if ((parsedCommand.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
         // default value
         parsedCommand.argv[0] = ALL_WHEELS;
@@ -263,7 +266,7 @@ void addCommandToQueue(WheelCommand cmd)
 
     printText("Executing entered command...\r\n");
 
-    if (cmd.Command & WHEEL_COMMAND_TYPE && cmd.argc > 0)
+    if ((cmd.Command & WHEEL_COMMAND_TYPE) && cmd.argc > 0)
     {
         WHEEL wheelNo = (WHEEL)cmd.argv[0];
         if (wheelNo == ALL_WHEELS)
@@ -358,17 +361,31 @@ inline void stopWheel(WheelPinsStruct wheelPins)
 
 void vWheelTask( void *pvParameters )
 {
-    portBASE_TYPE xStatus;
+    volatile portBASE_TYPE xStatus;
 
-    TickType_t timeOut = portMAX_DELAY;
+    volatile TickType_t timeOut = portMAX_DELAY;   // initial value to wait for the command. Then it will be 0 to not block the execution.
+    const TickType_t timeDelay = 500/portTICK_RATE_MS;   // max timeout to wait level value from the queue.
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
     TickType_t startTime = 0;
 
     WheelCommand cmd;
+    bool stopWheelFlag = false;
+    portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
+
+    if (wheelPins.wheel == FL_WHEEL)
+        printText("0");
+    if (wheelPins.wheel == FR_WHEEL)
+        printText("1");
+    if (wheelPins.wheel == BL_WHEEL)
+        printText("2");
+    if (wheelPins.wheel == BR_WHEEL)
+        printText("3");
+
     for( ;; )
     {
-        xStatus = xQueueReceive(wheelsCommandsQueueHandles[wheelPins.wheel], &cmd, timeOut);
+        xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
 
         /*
         * Check for a new command
@@ -380,6 +397,15 @@ void vWheelTask( void *pvParameters )
                     stopWheel(wheelPins);
                     openPin(wheelPins.upPin);
                     startTime = xTaskGetTickCount();
+
+                    if (wheelPins.wheel == FL_WHEEL)
+                        printText("0");
+                    if (wheelPins.wheel == FR_WHEEL)
+                        printText("1");
+                    if (wheelPins.wheel == BL_WHEEL)
+                        printText("2");
+                    if (wheelPins.wheel == BR_WHEEL)
+                        printText("3");
                     break;
                 case CMD_WHEEL_DOWN:
                     stopWheel(wheelPins);
@@ -402,25 +428,74 @@ void vWheelTask( void *pvParameters )
          */
 
         // here we should check that we do not exceeded a needed level
-        // if it happens then stop task and wait for a new command
+        // if it happens then stop wheel and wait for a new command
         // if not, continue cycle execution
+
+        /*volatile uint16 levelValue = 0;
+        xStatus = xQueueReceive(wheelsLevelsQueueHandles[wheelNumber], &levelValue, timeDelay);
+        if (xStatus == pdTRUE)
+        {
+            // just for tests
+            if (levelValue < 200 || levelValue > 800)
+            {
+                stopWheelFlag = true;
+            }
+        }
+        else
+        {
+            printText("ERROR!!! Timeout at level value reading from the queue!!!");
+        }*/
 
         /*
          * Check timer
          */
-        portCHAR elapsedTimeSec = (xTaskGetTickCount() - startTime)/configTICK_RATE_HZ;
+        volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - startTime)/configTICK_RATE_HZ;
         if (elapsedTimeSec >= WHEEL_TIMER_TIMEOUT_SEC)
         {
-            stopWheel(wheelPins);
-            timeOut = portMAX_DELAY;
-            continue;
+             stopWheelFlag = true;
         }
 
-        timeOut = 0;   // don't block task on queue next time and execute checks.
+        // stop wheel if it is needed
+        if (stopWheelFlag)
+        {
+            stopWheelFlag = false;
+
+            stopWheel(wheelPins);
+            timeOut = portMAX_DELAY;
+        }
+        else
+        {
+            timeOut = 0;   // don't block task on queue next time and execute checks.
+        }
 
         DUMMY_BREAK;
     }
     vTaskDelete( NULL );
+}
+
+void vADCUpdaterTask( void *pvParameters )
+{
+    initializeADC();
+
+    const TickType_t timeDelay = 50/portTICK_RATE_MS;
+
+    adcData_t adc_data[WHEELS_COUNT];
+    for( ;; )
+    {
+        getADCValues(&adc_data[0]);
+
+        portSHORT i = 0;
+        for (; i< WHEELS_COUNT; ++i)
+        {
+            xQueueOverwrite(wheelsLevelsQueueHandles[i], &(adc_data[i].value));  // always returns pdTRUE
+        }
+
+        vTaskDelay(timeDelay);
+
+        //char str[100] = {'/0'};
+        //sprintf(str, "%d %d %d %d\r\n", adc_data[0].value, adc_data[1].value, adc_data[2].value, adc_data[3].value);
+        //printText(str);
+    }
 }
 
 
@@ -439,6 +514,11 @@ int main(void)
     for (; i< WHEELS_COUNT; ++i)
     {
         wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
+    }
+
+    for (i = 0; i< WHEELS_COUNT; ++i)
+    {
+        wheelsLevelsQueueHandles[i] = xQueueCreate(1, sizeof(uint16));  // the only value for each wheel
     }
 
     memoryCommandsQueueHandle = xQueueCreate(3, sizeof(WheelCommand));
@@ -491,6 +571,12 @@ int main(void)
      * Memory task
      */
     taskResult = xTaskCreate(vMemTask, "MemTask", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTaskCreate(vADCUpdaterTask, "ADCUpdater", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
     {
         goto ERROR;
