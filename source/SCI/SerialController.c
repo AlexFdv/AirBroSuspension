@@ -18,7 +18,7 @@ void sciDisplayData(const portCHAR *text, portSHORT length)
     sciBASE_t *sciReg = scilinREG;
     while (length--)
     {
-        uint32 chr = (uint32)(*(text++));
+        uint8 chr = (uint8)(*(text++));
         while ((sciReg->FLR & 0x4) == 4)
             ; /* wait until busy */
         sciSendByte(sciReg, chr); /* send out text */

@@ -70,6 +70,7 @@
 #include "FreeRTOS.h"
 #include "os_task.h"
 #include "os_queue.h"
+#include "os_semphr.h"
 
 #include "Levels.h"
 #include "HetConstants.h"
@@ -99,6 +100,7 @@ xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 xQueueHandle wheelsLevelsQueueHandles[WHEELS_COUNT];
 
 void printText(const char* text);
+void printNumber(const portSHORT number);
 void printText_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
@@ -315,10 +317,10 @@ void vMemTask( void *pvParameters )
 
             // printing. Remove later
             LevelValues level = levels[levelNumber];
-            int n = 0;
-            char str[50] = {0};
-            n = snprintf(str, 50, "%d %d %d %d", level.fl_wheel, level.fr_wheel, level.bl_wheel, level.br_wheel);
-            printText_ex(str, n);
+            //int n = 0;
+            //char str[50] = {0};
+            //n = snprintf(str, 50, "%d %d %d %d", level.fl_wheel, level.fr_wheel, level.bl_wheel, level.br_wheel);
+            //printText_ex(str, n);
             // end printing
 
         }
@@ -364,28 +366,25 @@ void vWheelTask( void *pvParameters )
     volatile portBASE_TYPE xStatus;
 
     volatile TickType_t timeOut = portMAX_DELAY;   // initial value to wait for the command. Then it will be 0 to not block the execution.
-    const TickType_t timeDelay = 500/portTICK_RATE_MS;   // max timeout to wait level value from the queue.
+    //const TickType_t timeDelay = 500/portTICK_RATE_MS;   // max timeout to wait level value from the queue.
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
     TickType_t startTime = 0;
 
     WheelCommand cmd;
     bool stopWheelFlag = false;
-    portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    volatile portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
     xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
-
-    if (wheelPins.wheel == FL_WHEEL)
-        printText("0");
-    if (wheelPins.wheel == FR_WHEEL)
-        printText("1");
-    if (wheelPins.wheel == BL_WHEEL)
-        printText("2");
-    if (wheelPins.wheel == BR_WHEEL)
-        printText("3");
 
     for( ;; )
     {
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
+
+        if (xStatus == pdFALSE && timeOut == portMAX_DELAY)
+        {
+            printText("FUCK ");
+        }
+        printNumber(wheelNumber);
 
         /*
         * Check for a new command
@@ -397,15 +396,6 @@ void vWheelTask( void *pvParameters )
                     stopWheel(wheelPins);
                     openPin(wheelPins.upPin);
                     startTime = xTaskGetTickCount();
-
-                    if (wheelPins.wheel == FL_WHEEL)
-                        printText("0");
-                    if (wheelPins.wheel == FR_WHEEL)
-                        printText("1");
-                    if (wheelPins.wheel == BL_WHEEL)
-                        printText("2");
-                    if (wheelPins.wheel == BR_WHEEL)
-                        printText("3");
                     break;
                 case CMD_WHEEL_DOWN:
                     stopWheel(wheelPins);
@@ -598,14 +588,38 @@ ERROR:
 /* USER CODE BEGIN (4) */
 
 //prints the text with terminated null char
-void printText(const char* errorText)
+void printText(const char* text)
 {
-    sciDisplayData(errorText, strlen(errorText));
+    printText_ex(text, strlen(text));
 }
 
-void printText_ex(const char* errorText, short maxLen)
+void printNumber(const portSHORT number)
 {
-    sciDisplayData(errorText, maxLen);
+    char buff[10] = {'\0'};
+    //int n = sprintf(buff, "%d", number);
+    switch (number)
+            {
+            case 0:
+                buff[0] = '0';
+                break;
+            case 1:
+                buff[0] = '1';
+                break;
+            case 2:
+                buff[0] = '2';
+                break;
+            case 3:
+                buff[0] = '3';
+                break;
+            default:
+                break;
+            }
+    sciDisplayData(buff, 1);
+}
+
+void printText_ex(const char* text, const short maxLen)
+{
+    sciDisplayData(text, maxLen);
 }
 
 /* USER CODE END */
