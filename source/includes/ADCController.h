@@ -9,8 +9,11 @@
 #define SOURCE_INCLUDES_ADCCONTROLLER_H_
 
 #include "adc.h"
+#include "Constants.h"
 
 void initializeADC();
+void startADCConversion(short wheelNumber);
+void stopADCConversion(short wheelNumber);
 void getADCValues(adcData_t* adcData);
 
 #endif /* SOURCE_INCLUDES_ADCCONTROLLER_H_ */

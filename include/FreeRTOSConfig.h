@@ -128,7 +128,7 @@
 #define configUSE_RECURSIVE_MUTEXES     0
 
 /* Semaphores */
-#define configUSE_COUNTING_SEMAPHORES   0
+#define configUSE_COUNTING_SEMAPHORES   1
 
 /* Timers */
 #define configUSE_TIMERS                0

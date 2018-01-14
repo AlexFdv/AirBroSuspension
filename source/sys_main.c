@@ -308,6 +308,10 @@ void vMemTask( void *pvParameters )
     for( ;; )
     {
         portBASE_TYPE xStatus = xQueueReceive(memoryCommandsQueueHandle, &cmd, timeOut);
+        if (xStatus == pdFALSE)
+        {
+            printText("ERROR in memory task!!!");
+        }
 
         if (cmd.Command == CMD_MEMORY_GET)
         {
@@ -316,11 +320,11 @@ void vMemTask( void *pvParameters )
             readLevels((void*)&levels);
 
             // printing. Remove later
-            LevelValues level = levels[levelNumber];
-            //int n = 0;
-            //char str[50] = {0};
-            //n = snprintf(str, 50, "%d %d %d %d", level.fl_wheel, level.fr_wheel, level.bl_wheel, level.br_wheel);
-            //printText_ex(str, n);
+            /*LevelValues level = levels[levelNumber];
+            int n = 0;
+            char str[50] = {0};
+            n = snprintf(str, 50, "%d %d %d %d", level.fl_wheel, level.fr_wheel, level.bl_wheel, level.br_wheel);
+            printText_ex(str, n);*/
             // end printing
 
         }
@@ -337,10 +341,24 @@ void vMemTask( void *pvParameters )
                 LevelValues levels[LEVELS_NUMBER] = {0};
                 readLevels((void*)&levels);
 
-                //
-                // get ADC values and save them
-                //
-                writeLevels((void*)&levels);
+                /*
+                short i = 0;
+                for (; i < WHEELS_COUNT; ++i)
+                {
+                    uint16 levelValue = 0;
+                    xStatus = xQueuePeek(wheelsLevelsQueueHandles[i], &levelValue, 0);
+                    if (xStatus == pdFALSE)
+                    {
+                        printText("ERROR reading of level in mem task!!!");
+                        break;
+                    }
+                    //levels[levelNumber].
+                }*/
+
+                if (xStatus == pdTRUE)
+                {
+                    writeLevels((void*)&levels);
+                }
             }
         }
 
@@ -359,6 +377,8 @@ inline void stopWheel(WheelPinsStruct wheelPins)
 {
     closePin(wheelPins.upPin);
     closePin(wheelPins.downPin);
+
+    stopADCConversion((short)wheelPins.wheel);
 }
 
 void vWheelTask( void *pvParameters )
@@ -366,7 +386,7 @@ void vWheelTask( void *pvParameters )
     volatile portBASE_TYPE xStatus;
 
     volatile TickType_t timeOut = portMAX_DELAY;   // initial value to wait for the command. Then it will be 0 to not block the execution.
-    //const TickType_t timeDelay = 500/portTICK_RATE_MS;   // max timeout to wait level value from the queue.
+    const TickType_t timeDelay = 500/portTICK_RATE_MS;   // max timeout to wait level value from the queue.
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
     TickType_t startTime = 0;
@@ -411,6 +431,8 @@ void vWheelTask( void *pvParameters )
                     printText("Unknown command received");
                     continue;
             }
+
+            startADCConversion(wheelNumber);
         } // end new command
 
         /*
@@ -421,8 +443,8 @@ void vWheelTask( void *pvParameters )
         // if it happens then stop wheel and wait for a new command
         // if not, continue cycle execution
 
-        /*volatile uint16 levelValue = 0;
-        xStatus = xQueueReceive(wheelsLevelsQueueHandles[wheelNumber], &levelValue, timeDelay);
+        uint16 levelValue = 0;
+        xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, timeDelay);
         if (xStatus == pdTRUE)
         {
             // just for tests
@@ -434,7 +456,7 @@ void vWheelTask( void *pvParameters )
         else
         {
             printText("ERROR!!! Timeout at level value reading from the queue!!!");
-        }*/
+        }
 
         /*
          * Check timer
@@ -467,7 +489,7 @@ void vADCUpdaterTask( void *pvParameters )
 {
     initializeADC();
 
-    const TickType_t timeDelay = 50/portTICK_RATE_MS;
+    const TickType_t timeDelay = 30/portTICK_RATE_MS;  // 30 ms
 
     adcData_t adc_data[WHEELS_COUNT];
     for( ;; )
