@@ -12,10 +12,10 @@
 
 typedef struct _LevelValues
 {
-    portSHORT fl_wheel;
-    portSHORT fr_wheel;
+    portSHORT wheels[4];
+    /*portSHORT fr_wheel;
     portSHORT bl_wheel;
-    portSHORT br_wheel;
+    portSHORT br_wheel;*/
 } LevelValues;
 
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

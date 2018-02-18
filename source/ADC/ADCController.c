@@ -12,7 +12,7 @@
 #include "FreeRTOS.h"
 #include "os_semphr.h"
 
-bool doConversion[WHEELS_COUNT];
+portSHORT doConversion[WHEELS_COUNT];
 xSemaphoreHandle semaphore;
 
 void initializeADC()
@@ -24,19 +24,19 @@ void initializeADC()
     short i = 0;
     for (; i < WHEELS_COUNT; ++i)
     {
-        doConversion[i] = false;
+        doConversion[i] = 0;
     }
 }
 
 void startADCConversion(short wheelNumber)
 {
-    doConversion[wheelNumber] = true;
+    ++doConversion[wheelNumber];
     xSemaphoreGive(semaphore);
 }
 
 void stopADCConversion(short wheelNumber)
 {
-    doConversion[wheelNumber] = false;
+    --doConversion[wheelNumber];
 }
 
 bool checkConversions()
@@ -44,7 +44,7 @@ bool checkConversions()
     short i = 0;
     for (; i < WHEELS_COUNT; ++i)
     {
-        if (doConversion[i])
+        if (doConversion[i] != 0)
             return true;
     }
     return false;
