@@ -79,6 +79,7 @@
 #include "StringUtils.h"
 #include "Constants.h"
 
+
 /* USER CODE END */
 
 /** @fn void main(void)
@@ -234,7 +235,7 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
         {
             portSHORT levelNo = atoi(levelNumberStr);
-            if (levelNo >= 0 && levelNo < LEVELS_NUMBER)
+            if (levelNo >= 0 && levelNo < LEVELS_COUNT)
             {
                 parsedCommand.argc = 1;
                 parsedCommand.argv[0] = levelNo;
@@ -249,7 +250,7 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
         {
             portSHORT levelNo = atoi(levelNumberStr);
-            if (levelNo >= 0 && levelNo < LEVELS_NUMBER)
+            if (levelNo >= 0 && levelNo < LEVELS_COUNT)
             {
                 parsedCommand.argc = 1;
                 parsedCommand.argv[0] = levelNo;
@@ -317,9 +318,16 @@ void vMemTask( void *pvParameters )
 
         if (cmd.Command == CMD_MEMORY_GET)
         {
-            //portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
-            LevelValues levels[LEVELS_NUMBER] = {0}; // BLOCK_SIZE / sizeof(levels)
+            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
+            LevelValues levels[LEVELS_COUNT] = {0}; // BLOCK_SIZE / sizeof(levels)
             readLevels((void*)&levels);
+
+            int i = 0;
+            for (; i < WHEELS_COUNT; ++i)
+            {
+                printNumber(levels[levelNumber].wheels[i]);
+                printText("\r\n");
+            }
         }
 
         if (cmd.Command == CMD_MEMORY_SAVE)
@@ -331,7 +339,7 @@ void vMemTask( void *pvParameters )
             else
             {
                 portSHORT levelNumber = cmd.argv[0];
-                LevelValues levels[LEVELS_NUMBER] = {0};
+                LevelValues levels[LEVELS_COUNT] = {0};
                 readLevels((void*)&levels);
 
                 short i = 0;
@@ -349,6 +357,9 @@ void vMemTask( void *pvParameters )
                         break;
                     }
                     levels[levelNumber].wheels[i] = levelValue;
+
+                    printNumber(levelValue);
+                    printText("\r\n");
 
                     stopADCConversion(i);
                 }
@@ -378,8 +389,6 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.upPin);
     closePin(wheelPins.downPin);
 }
-
-
 
 void vWheelTask( void *pvParameters )
 {
@@ -616,25 +625,8 @@ void printText(const char* text)
 void printNumber(const portSHORT number)
 {
     char buff[10] = {'\0'};
-    //int n = sprintf(buff, "%d", number);
-    switch (number)
-            {
-            case 0:
-                buff[0] = '0';
-                break;
-            case 1:
-                buff[0] = '1';
-                break;
-            case 2:
-                buff[0] = '2';
-                break;
-            case 3:
-                buff[0] = '3';
-                break;
-            default:
-                break;
-            }
-    sciDisplayData(buff, 1);
+    ltoa(number, buff);
+    printText(buff);
 }
 
 void printText_ex(const char* text, const short maxLen)
