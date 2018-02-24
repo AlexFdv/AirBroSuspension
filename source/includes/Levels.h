@@ -12,7 +12,7 @@
 
 typedef struct _LevelValues
 {
-    portSHORT wheels[4];
+    uint16 wheels[4];
     /*portSHORT fr_wheel;
     portSHORT bl_wheel;
     portSHORT br_wheel;*/

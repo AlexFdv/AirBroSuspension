@@ -122,6 +122,7 @@ WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portC
 WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
 WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
 
+LevelValues cachedLevels[LEVELS_COUNT];
 
 /*
  * Tasks implementation
@@ -229,7 +230,7 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 
     if (0 == strncmp(command, "lsave", 5))
     {
-        parsedCommand.Command = CMD_MEMORY_SAVE;
+        parsedCommand.Command = CMD_LEVELS_SAVE;
 
         char* levelNumberStr = strchr(command, ' ');
         if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
@@ -245,7 +246,7 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 
     if (0 == strncmp(command, "lget", 4))
     {
-        parsedCommand.Command = CMD_MEMORY_GET;
+        parsedCommand.Command = CMD_LEVELS_GET;
         char* levelNumberStr = strchr(command, ' ');
         if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
         {
@@ -256,6 +257,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
                 parsedCommand.argv[0] = levelNo;
             }
         }
+    }
+
+    if (0 == strncmp(command, "lshow", 5))
+    {
+        parsedCommand.Command = CMD_LEVELS_SHOW;
     }
 
     return parsedCommand;
@@ -288,7 +294,7 @@ void addCommandToQueue(WheelCommand cmd)
         }
     }
 
-    if (cmd.Command & MEMORY_COMMAND_TYPE)
+    if (cmd.Command & LEVELS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
 
@@ -300,11 +306,51 @@ void addCommandToQueue(WheelCommand cmd)
     }
 }
 
+inline bool GetWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
+{
+    // clear to wait for the updated value from the ADCUpdater task.
+    xQueueReset(wheelsLevelsQueueHandles[wheelNumber]);
+
+    startADCConversion(wheelNumber);
+    portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(5000));
+    stopADCConversion(wheelNumber);
+
+    return xStatus == pdTRUE;
+}
+
+inline bool GetCurrentWheelsLevelsValues(LevelValues* const retLevels)
+{
+    portSHORT i = 0;
+    for (; i < WHEELS_COUNT; ++i)
+    {
+        if (!GetWheelLevelValue(i, &(retLevels->wheels[i])))
+        {
+            printText("ERROR reading of level from mem task!!!");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+inline void printLevels(const LevelValues* const levels)
+{
+    portSHORT i = 0;
+    for (; i < WHEELS_COUNT; ++i)
+    {
+        printNumber(levels->wheels[i]);
+        printText("\r\n");
+    }
+}
+
 void vMemTask( void *pvParameters )
 {
     swiSwitchToMode(0x1F);
 
     initializeFEE();
+
+    // update cached levels to actual values
+    readLevels((void*)&cachedLevels);
 
     TickType_t timeOut = portMAX_DELAY;
     WheelCommand cmd;
@@ -316,21 +362,13 @@ void vMemTask( void *pvParameters )
             printText("ERROR in memory task!!!");
         }
 
-        if (cmd.Command == CMD_MEMORY_GET)
+        if (cmd.Command == CMD_LEVELS_GET)
         {
             portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
-            LevelValues levels[LEVELS_COUNT] = {0}; // BLOCK_SIZE / sizeof(levels)
-            readLevels((void*)&levels);
-
-            int i = 0;
-            for (; i < WHEELS_COUNT; ++i)
-            {
-                printNumber(levels[levelNumber].wheels[i]);
-                printText("\r\n");
-            }
+            printLevels(&(cachedLevels[levelNumber]));
         }
 
-        if (cmd.Command == CMD_MEMORY_SAVE)
+        if (cmd.Command == CMD_LEVELS_SAVE)
         {
             if (cmd.argc == 0)
             {
@@ -338,42 +376,28 @@ void vMemTask( void *pvParameters )
             }
             else
             {
-                portSHORT levelNumber = cmd.argv[0];
-                LevelValues levels[LEVELS_COUNT] = {0};
-                readLevels((void*)&levels);
-
-                short i = 0;
-                for (; i < WHEELS_COUNT; ++i)
+                portSHORT levelToUpdate = cmd.argv[0];
+                LevelValues currLevel;
+                if (GetCurrentWheelsLevelsValues(&currLevel))
                 {
-                    // clear to wait for the updated value from the ADCUpdater task.
-                    xQueueReset(wheelsLevelsQueueHandles[i]);
-
-                    startADCConversion(i);
-                    uint16 levelValue = 0;
-                    xStatus = xQueuePeek(wheelsLevelsQueueHandles[i], &levelValue, MS_TO_TICKS(5000));
-                    if (xStatus == pdFALSE)
-                    {
-                        printText("ERROR reading of level in mem task!!!");
-                        break;
-                    }
-                    levels[levelNumber].wheels[i] = levelValue;
-
-                    printNumber(levelValue);
-                    printText("\r\n");
-
-                    stopADCConversion(i);
+                    cachedLevels[levelToUpdate] = currLevel;
+                    writeLevels((void*)&cachedLevels);
+                    printLevels(&currLevel);
+                    printText("levels saved \r\n");
                 }
-
-                if (xStatus == pdTRUE)
-                {
-                    writeLevels((void*)&levels);
-                }
-
-                printText("levels saved");
             }
         }
 
-        if (cmd.Command == CMD_MEMORY_CLEAR)
+        if (cmd.Command == CMD_LEVELS_SHOW)
+        {
+            LevelValues currLevel;
+            if (GetCurrentWheelsLevelsValues(&currLevel))
+            {
+                    printLevels(&currLevel);
+            }
+        }
+
+        if (cmd.Command == CMD_LEVELS_CLEAR)
         {
             formatFEE();
         }
@@ -383,6 +407,8 @@ void vMemTask( void *pvParameters )
 
     vTaskDelete( NULL );
 }
+
+
 
 inline void stopWheel(WheelPinsStruct wheelPins)
 {
