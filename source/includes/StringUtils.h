@@ -10,12 +10,17 @@
 
 #include <ctype.h>
 
-bool isDigits(const char* str)
+bool isDigits(const char* str, char stopChar)
 {
     if (str == NULL)
         return false;
 
-    size_t len = strlen(str);
+    size_t len = 0;
+    char* pch = strchr(str, stopChar);
+    if (pch != NULL)
+        len = pch - str;
+    else
+        len = strlen(str);
 
     if (len == 0)
         return false;

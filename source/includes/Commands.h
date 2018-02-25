@@ -23,8 +23,7 @@ typedef enum
     FL_WHEEL = 0,  // front left
     FR_WHEEL = 1,  // front right
     BL_WHEEL = 2,  // back left
-    BR_WHEEL = 3,   // back right
-    ALL_WHEELS = 4
+    BR_WHEEL = 3   // back right
 } WHEEL;
 
 typedef enum

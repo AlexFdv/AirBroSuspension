@@ -181,6 +181,26 @@ void vCommandHandlerTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
+void parseParams(char* strCmd, WheelCommand* const retCommand )
+{
+    char* str = strchr(strCmd, ' ');
+    while (str != NULL)
+    {
+        ++str;
+        if (isDigits(str, ' '))
+        {
+            portSHORT param = atoi(str);
+            retCommand->argv[retCommand->argc] = param;
+            retCommand->argc++;
+
+            str = strchr(str, ' ');
+        }
+        else
+        {
+            break;
+        }
+    }
+}
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 {
@@ -212,51 +232,20 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     // additional action: parse wheel number
     if ((parsedCommand.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
-        // default value
-        parsedCommand.argv[0] = ALL_WHEELS;
-        parsedCommand.argc = 1;
-
-        // get the wheel number
-        char* wheelStr = strchr(command, ' ');
-        if (wheelStr != NULL && isDigits(wheelStr + 1))
-        {
-            portSHORT wheelNo = atoi(wheelStr);
-            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
-            {
-                parsedCommand.argv[0] = wheelNo;
-            }
-        }
+        parseParams(command, &parsedCommand);
+        return parsedCommand;
     }
 
     if (0 == strncmp(command, "lsave", 5))
     {
         parsedCommand.Command = CMD_LEVELS_SAVE;
-
-        char* levelNumberStr = strchr(command, ' ');
-        if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
-        {
-            portSHORT levelNo = atoi(levelNumberStr);
-            if (levelNo >= 0 && levelNo < LEVELS_COUNT)
-            {
-                parsedCommand.argc = 1;
-                parsedCommand.argv[0] = levelNo;
-            }
-        }
+        parseParams(command, &parsedCommand);
     }
 
     if (0 == strncmp(command, "lget", 4))
     {
         parsedCommand.Command = CMD_LEVELS_GET;
-        char* levelNumberStr = strchr(command, ' ');
-        if (levelNumberStr != NULL && isDigits(levelNumberStr + 1))
-        {
-            portSHORT levelNo = atoi(levelNumberStr);
-            if (levelNo >= 0 && levelNo < LEVELS_COUNT)
-            {
-                parsedCommand.argc = 1;
-                parsedCommand.argv[0] = levelNo;
-            }
-        }
+        parseParams(command, &parsedCommand);
     }
 
     if (0 == strncmp(command, "lshow", 5))
@@ -277,10 +266,9 @@ void addCommandToQueue(WheelCommand cmd)
 
     printText("Executing entered command...\r\n");
 
-    if ((cmd.Command & WHEEL_COMMAND_TYPE) && cmd.argc > 0)
+    if (cmd.Command & WHEEL_COMMAND_TYPE)
     {
-        WHEEL wheelNo = (WHEEL)cmd.argv[0];
-        if (wheelNo == ALL_WHEELS)
+        if (cmd.argc == 0)
         {
             portCHAR i = 0;
             for (; i< WHEELS_COUNT; ++i)
@@ -290,7 +278,9 @@ void addCommandToQueue(WheelCommand cmd)
         }
         else
         {
-            xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
+            WHEEL wheelNo = (WHEEL)cmd.argv[0];
+            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
+                xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
         }
     }
 
@@ -306,7 +296,7 @@ void addCommandToQueue(WheelCommand cmd)
     }
 }
 
-inline bool GetWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
+inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
     // clear to wait for the updated value from the ADCUpdater task.
     xQueueReset(wheelsLevelsQueueHandles[wheelNumber]);
@@ -318,12 +308,12 @@ inline bool GetWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     return xStatus == pdTRUE;
 }
 
-inline bool GetCurrentWheelsLevelsValues(LevelValues* const retLevels)
+inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
 {
     portSHORT i = 0;
     for (; i < WHEELS_COUNT; ++i)
     {
-        if (!GetWheelLevelValue(i, &(retLevels->wheels[i])))
+        if (!getWheelLevelValue(i, &(retLevels->wheels[i])))
         {
             printText("ERROR reading of level from mem task!!!");
             return false;
@@ -362,38 +352,34 @@ void vMemTask( void *pvParameters )
             printText("ERROR in memory task!!!");
         }
 
+        portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
+        levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
+
         if (cmd.Command == CMD_LEVELS_GET)
         {
-            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
             printLevels(&(cachedLevels[levelNumber]));
         }
 
         if (cmd.Command == CMD_LEVELS_SAVE)
         {
-            if (cmd.argc == 0)
+            LevelValues currLevel;
+            if (getCurrentWheelsLevelsValues(&currLevel))
             {
-                printText("Provide a level number.");
-            }
-            else
-            {
-                portSHORT levelToUpdate = cmd.argv[0];
-                LevelValues currLevel;
-                if (GetCurrentWheelsLevelsValues(&currLevel))
-                {
-                    cachedLevels[levelToUpdate] = currLevel;
-                    writeLevels((void*)&cachedLevels);
-                    printLevels(&currLevel);
-                    printText("levels saved \r\n");
-                }
+                cachedLevels[levelNumber] = currLevel;
+                writeLevels((void*)&cachedLevels);
+                printLevels(&currLevel);
+                printText("levels saved to ");
+                printNumber(levelNumber);
+                printText("\r\n");
             }
         }
 
         if (cmd.Command == CMD_LEVELS_SHOW)
         {
             LevelValues currLevel;
-            if (GetCurrentWheelsLevelsValues(&currLevel))
+            if (getCurrentWheelsLevelsValues(&currLevel))
             {
-                    printLevels(&currLevel);
+                printLevels(&currLevel);
             }
         }
 
