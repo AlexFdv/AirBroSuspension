@@ -268,6 +268,7 @@ void addCommandToQueue(WheelCommand cmd)
 
     if (cmd.Command & WHEEL_COMMAND_TYPE)
     {
+        // open all wheels
         if (cmd.argc == 0)
         {
             portCHAR i = 0;
@@ -279,15 +280,16 @@ void addCommandToQueue(WheelCommand cmd)
         else
         {
             WHEEL wheelNo = (WHEEL)cmd.argv[0];
-            if (wheelNo >= 0 && wheelNo < WHEELS_COUNT)
+            if (wheelNo < WHEELS_COUNT)
+            {
                 xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
+            }
         }
     }
 
     if (cmd.Command & LEVELS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
-
         portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
         if (xStatus != pdTRUE)
         {
@@ -402,25 +404,26 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
+
+const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+
 void vWheelTask( void *pvParameters )
 {
     volatile portBASE_TYPE xStatus;
-
     volatile TickType_t timeOut = portMAX_DELAY;   // initial value to wait for the command. Then it will be 0 to not block the execution.
-    const TickType_t timeDelay = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
     TickType_t startTime = 0;
 
-    WheelCommand cmd;
     volatile portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
     xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
 
     bool isWorking = false;
+    WheelCommand cmd;
     for( ;; )
     {
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
-
         if (xStatus == pdFALSE && timeOut == portMAX_DELAY)
         {
             printText("FUCK ");
@@ -467,7 +470,7 @@ void vWheelTask( void *pvParameters )
          */
 
         uint16 levelValue = 0;
-        xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, timeDelay);
+        xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
         if (xStatus == pdTRUE)
         {
             // just for tests
