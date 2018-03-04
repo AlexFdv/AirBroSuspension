@@ -102,6 +102,8 @@ xQueueHandle memoryCommandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 xQueueHandle wheelsLevelsQueueHandles[WHEELS_COUNT];
 
+const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+
 void printText(const char* text);
 void printNumber(const portSHORT number);
 void printText_ex(const char* text, short maxLen);
@@ -117,10 +119,10 @@ typedef struct
 } WheelPinsStruct;
 
 // assosiations with pins
-WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
-WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
-WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
-WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
+const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
+const WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
+const WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
+const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
 
 LevelValues cachedLevels[LEVELS_COUNT];
 
@@ -131,6 +133,8 @@ LevelValues cachedLevels[LEVELS_COUNT];
 // TODO: move receiving to the interruption
 void vCommandReceiverTask( void *pvParameters )
 {
+
+
     portBASE_TYPE xStatus;
     portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
 
@@ -196,6 +200,12 @@ void parseParams(char* strCmd, WheelCommand* const retCommand )
             str = strchr(str, ' ');
         }
         else
+        {
+            break;
+        }
+
+        // actually shouldn't be greater then COMMAND_ARGS_LIMIT
+        if (retCommand->argc >= COMMAND_ARGS_LIMIT)
         {
             break;
         }
@@ -307,7 +317,7 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(5000));
     stopADCConversion(wheelNumber);
 
-    return xStatus == pdTRUE;
+    return (xStatus == pdTRUE);
 }
 
 inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
@@ -404,9 +414,6 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
-
-const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
-
 void vWheelTask( void *pvParameters )
 {
     volatile portBASE_TYPE xStatus;
@@ -415,6 +422,7 @@ void vWheelTask( void *pvParameters )
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
     TickType_t startTime = 0;
+    portSHORT levelLimit = -1;
 
     volatile portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
     xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
@@ -424,10 +432,10 @@ void vWheelTask( void *pvParameters )
     for( ;; )
     {
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
-        if (xStatus == pdFALSE && timeOut == portMAX_DELAY)
+        /*if (xStatus == pdFALSE && timeOut == portMAX_DELAY)
         {
             printText("FUCK ");
-        }
+        }*/
 
         /*
         * Check for a new command
@@ -459,6 +467,13 @@ void vWheelTask( void *pvParameters )
                     printText("Unknown command received");
                     continue;
             }
+
+            if (cmd.argc > 1)
+            {
+                portSHORT number = cmd.argv[1];
+                levelLimit = cachedLevels[number].wheels[wheelNumber];
+            }
+
         } // end new command
 
         /*
@@ -469,19 +484,18 @@ void vWheelTask( void *pvParameters )
          * If not - continue cycle execution.
          */
 
-        uint16 levelValue = 0;
-        xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
-        if (xStatus == pdTRUE)
+        if (levelLimit >= 0)
         {
-            // just for tests
-            if (levelValue < 200 || levelValue > 800)
+            uint16 levelValue = 0;
+            xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
+            if (xStatus == pdTRUE)
             {
-                //isWorking = false;
+                isWorking = (cmd.Command == CMD_WHEEL_UP) ? (levelValue < levelLimit) : (levelValue > levelLimit);
             }
-        }
-        else
-        {
-            printText("ERROR!!! Timeout at level value reading from the queue!!!");
+            else
+            {
+                printText("ERROR!!! Timeout at level value reading from the queue!!!");
+            }
         }
 
         /*
@@ -498,6 +512,7 @@ void vWheelTask( void *pvParameters )
         {
             stopWheel(wheelPins);
             timeOut = portMAX_DELAY;
+            levelLimit = -1;
 
             stopADCConversion(wheelNumber);
         }
@@ -531,7 +546,6 @@ void vADCUpdaterTask( void *pvParameters )
         vTaskDelay(timeDelay);
     }
 }
-
 
 /* USER CODE END */
 
@@ -627,7 +641,6 @@ ERROR:
 
     return 0;
 }
-
 
 /* USER CODE BEGIN (4) */
 
