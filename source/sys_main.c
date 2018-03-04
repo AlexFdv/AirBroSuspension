@@ -239,6 +239,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         parsedCommand.Command = CMD_WHEEL_STOP;
     }
 
+    if (0 == strncmp(command, "auto", 4))
+    {
+        parsedCommand.Command = CMD_WHEEL_AUTO;
+    }
+
     // additional action: parse wheel number
     if ((parsedCommand.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
@@ -266,48 +271,6 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     return parsedCommand;
 }
 
-void addCommandToQueue(WheelCommand cmd)
-{
-    if (cmd.Command == UNKNOWN_COMMAND)
-    {
-        printText("Unknown command received\r\n");
-        return;
-    }
-
-    printText("Executing entered command...\r\n");
-
-    if (cmd.Command & WHEEL_COMMAND_TYPE)
-    {
-        // open all wheels
-        if (cmd.argc == 0)
-        {
-            portCHAR i = 0;
-            for (; i< WHEELS_COUNT; ++i)
-            {
-                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
-            }
-        }
-        else
-        {
-            WHEEL wheelNo = (WHEEL)cmd.argv[0];
-            if (wheelNo < WHEELS_COUNT)
-            {
-                xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
-            }
-        }
-    }
-
-    if (cmd.Command & LEVELS_COMMAND_TYPE)
-    {
-        // add command to the memory task queue: clear, save, print levels.
-        portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
-        if (xStatus != pdTRUE)
-        {
-            printText("Could not add memory command to the queue (it is full).\r\n");
-        }
-    }
-}
-
 inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
     // clear to wait for the updated value from the ADCUpdater task.
@@ -333,6 +296,68 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     }
 
     return true;
+}
+
+void addCommandToQueue(WheelCommand cmd)
+{
+    if (cmd.Command == UNKNOWN_COMMAND)
+    {
+        printText("Unknown command received\r\n");
+        return;
+    }
+
+    printText("Executing entered command...\r\n");
+
+    if (cmd.Command & WHEEL_COMMAND_TYPE)
+    {
+        if (cmd.Command == CMD_WHEEL_AUTO)
+        {
+            LevelValues levels;
+            if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&levels))
+            {
+                LevelValues savedLevels = cachedLevels[cmd.argv[0]];
+
+                WheelCommand newCmd;
+                portCHAR i = 0;
+                for (; i< WHEELS_COUNT; ++i)
+                {
+                    newCmd.Command = (levels.wheels[i] < savedLevels.wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
+                    newCmd.argv[0] = i;
+                    newCmd.argv[1] = cmd.argv[0];
+                    newCmd.argc = 2;
+
+                    xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&newCmd);  // always returns pdTRUE
+                }
+            }
+        }
+        else if (cmd.argc == 0)
+        {
+            // for all wheels
+            portCHAR i = 0;
+            for (; i< WHEELS_COUNT; ++i)
+            {
+                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+            }
+        }
+        else
+        {
+            WHEEL wheelNo = (WHEEL)cmd.argv[0];
+            if (wheelNo < WHEELS_COUNT)
+            {
+                xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
+            }
+        }
+    }
+
+    if (cmd.Command & LEVELS_COMMAND_TYPE)
+    {
+        // add command to the memory task queue: clear, save, print levels.
+        portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
+        if (xStatus != pdTRUE)
+        {
+            printText("Could not add memory command to the queue (it is full).\r\n");
+        }
+    }
 }
 
 inline void printLevels(const LevelValues* const levels)
