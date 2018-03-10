@@ -43,7 +43,7 @@ void formatFEE()
 
 void writeLevels(void* levels)
 {
-    writeSyncFEE(LEVELS_BLOCK_NUMBER, levels);
+    writeSyncFEE(LEVELS_BLOCK_NUMBER, (uint8*)levels);
 }
 
 void readLevels(void* levels)
@@ -52,7 +52,7 @@ void readLevels(void* levels)
 }
 
 // TODO: try use async functions
-void writeSyncFEE(const unsigned int blockNumber, const void* value)
+void writeSyncFEE(const unsigned int blockNumber, uint8* value)
 {
     TI_Fee_WriteSync(LEVELS_BLOCK_NUMBER, value);
 }

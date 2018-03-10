@@ -17,7 +17,7 @@ void initializeFEE();
 void formatFEE();
 void writeLevels(void* levels);
 void readLevels(void* levels);
-void writeSyncFEE(const unsigned int blockNumber, const void* value);
+void writeSyncFEE(const unsigned int blockNumber, uint8 * value);
 void readSyncFEE(const unsigned int blockNumber, void* value, unsigned int len);
 
 #endif /* SOURCE_INCLUDES_FEECONTROLLER_H_ */
