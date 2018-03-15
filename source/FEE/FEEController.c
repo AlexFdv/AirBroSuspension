@@ -52,12 +52,12 @@ void readLevels(void* levels)
 }
 
 // TODO: try use async functions
-void writeSyncFEE(const unsigned int blockNumber, uint8* value)
+void writeSyncFEE(const uint16 blockNumber, uint8* value)
 {
-    TI_Fee_WriteSync(LEVELS_BLOCK_NUMBER, value);
+    TI_Fee_WriteSync(blockNumber, value);
 }
 
-void readSyncFEE(const unsigned int blockNumber, void* value, const unsigned int len)
+void readSyncFEE(const uint16 blockNumber, void* value, const unsigned int len)
 {
     unsigned int blockOffset = 0;
     TI_Fee_ReadSync(blockNumber, blockOffset, value, len);

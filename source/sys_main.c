@@ -441,8 +441,6 @@ void vMemTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
-
-
 inline void stopWheel(WheelPinsStruct wheelPins)
 {
     closePin(wheelPins.upPin);
@@ -680,19 +678,19 @@ ERROR:
 /* USER CODE BEGIN (4) */
 
 //prints the text with terminated null char
-void printText(const char* text)
+inline void printText(const char* text)
 {
     printText_ex(text, strlen(text));
 }
 
-void printNumber(const portSHORT number)
+inline void printNumber(const portSHORT number)
 {
     char buff[10] = {'\0'};
     ltoa(number, buff);
     printText(buff);
 }
 
-void printText_ex(const char* text, const short maxLen)
+inline void printText_ex(const char* text, const short maxLen)
 {
     sciDisplayData(text, maxLen);
 }
