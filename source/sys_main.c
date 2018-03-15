@@ -48,6 +48,8 @@
 
 #define MS_TO_TICKS(x) ((x)/portTICK_RATE_MS)
 
+#define VERSION "0.0.1"
+
 /* USER CODE END */
 
 /* Include Files */
@@ -109,7 +111,7 @@ void printNumber(const portSHORT number);
 void printText_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
-void addCommandToQueue(WheelCommand);
+void sendToExecuteCommand(WheelCommand);
 
 typedef struct
 {
@@ -168,12 +170,12 @@ void vCommandHandlerTask( void *pvParameters )
         xStatus = xQueueReceive(commandsQueueHandle, receivedCommand, portMAX_DELAY);
         if (xStatus == pdTRUE)
         {
-            printText("Received the command: ");
-            printText_ex(receivedCommand, strlen(receivedCommand));
-            printText("\r\n");
+            //printText("Received the command: ");
+            //printText_ex(receivedCommand, strlen(receivedCommand));
+            //printText("\r\n");
 
             WheelCommand command = parseStringCommand(receivedCommand);
-            addCommandToQueue(command);
+            sendToExecuteCommand(command);
         }
         else
         {
@@ -268,6 +270,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         parsedCommand.Command = CMD_LEVELS_SHOW;
     }
 
+    if (0 == strncmp(command, "ver", 3))
+    {
+        parsedCommand.Command = CMD_GET_VERSION;
+    }
+
     return parsedCommand;
 }
 
@@ -298,15 +305,13 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     return true;
 }
 
-void addCommandToQueue(WheelCommand cmd)
+void sendToExecuteCommand(WheelCommand cmd)
 {
     if (cmd.Command == UNKNOWN_COMMAND)
     {
         printText("Unknown command received\r\n");
         return;
     }
-
-    printText("Executing entered command...\r\n");
 
     if (cmd.Command & WHEEL_COMMAND_TYPE)
     {
@@ -357,6 +362,11 @@ void addCommandToQueue(WheelCommand cmd)
         {
             printText("Could not add memory command to the queue (it is full).\r\n");
         }
+    }
+
+    if (cmd.Command & SYSTEM_COMMAND_TYPE)
+    {
+        printText(VERSION);
     }
 }
 
