@@ -589,7 +589,7 @@ QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType )
 }
 
 /*----------------------------------------------------------------------------*/
-#if ( configSUPPORT_STATIC_ALLOCATION  == 1 )
+
 QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType, StaticQueue_t *pxStaticQueue )
 {
 	QueueHandle_t xReturn;
@@ -598,7 +598,6 @@ QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType, StaticQueu
 	portRESET_PRIVILEGE( xRunningPrivileged );
 	return xReturn;
 }
-#endif
 #endif
 
 /*----------------------------------------------------------------------------*/
@@ -614,7 +613,8 @@ QueueHandle_t MPU_xQueueCreateCountingSemaphore( const UBaseType_t uxMaxCount, c
 }
 
 /*----------------------------------------------------------------------------*/
-#if ( configSUPPORT_STATIC_ALLOCATION  == 1 )
+
+#if( ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
 QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount, StaticQueue_t *pxStaticQueue )
 {
 	QueueHandle_t xReturn;

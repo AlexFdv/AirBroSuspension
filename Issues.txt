@@ -1,1 +1,13 @@
 1. Handling on level lget command execution - snprintf makes a controller to hang - strange behavior.
+2. После генерации кода халкогеном, требуеся добавить в файл os_mpu_wrappers.c следующую директиву на 616-ю строку
+
+#if( ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
+MPU_xQueueCreateCountingSemaphoreStatic
+QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( ... )
+{
+...
+}
+#endif
+
+тем самым "окружив" объявление функции MPU_xQueueCreateCountingSemaphoreStatic.
+Этот баг должен быть пофикшен в новых версиях кодогенератора.

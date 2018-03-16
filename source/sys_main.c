@@ -675,6 +675,7 @@ ERROR:
     return 0;
 }
 
+
 /* USER CODE BEGIN (4) */
 
 //prints the text with terminated null char

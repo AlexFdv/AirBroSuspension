@@ -13,6 +13,9 @@
 #define LEVELS_BLOCK_SIZE Fee_BlockConfiguration[0].FeeBlockSize
 #define LEVELS_BLOCK_NUMBER Fee_BlockConfiguration[0].FeeBlockNumber
 
+#define SETTINGS_BLOCK_SIZE Fee_BlockConfiguration[1].FeeBlockSize
+#define SETTINGS_BLOCK_NUMBER Fee_BlockConfiguration[1].FeeBlockNumber
+
 void initializeFEE();
 void formatFEE();
 void writeLevels(void* levels);
