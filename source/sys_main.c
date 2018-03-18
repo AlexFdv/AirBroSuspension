@@ -207,7 +207,6 @@ void parseParams(char* strCmd, WheelCommand* const retCommand )
             break;
         }
 
-        // actually shouldn't be greater then COMMAND_ARGS_LIMIT
         if (retCommand->argc >= COMMAND_ARGS_LIMIT)
         {
             break;
@@ -224,19 +223,16 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
          0
     };
 
-    // parse wheel command type
     if (0 == strncmp(command, "up", 2))
     {
         parsedCommand.Command = CMD_WHEEL_UP;
     }
 
-    // parse wheel command type
     if (0 == strncmp(command, "down", 4))
     {
         parsedCommand.Command = CMD_WHEEL_DOWN;
     }
 
-    // parse wheel command type
     if (0 == strncmp(command, "stop", 4))
     {
         parsedCommand.Command = CMD_WHEEL_STOP;
@@ -247,23 +243,14 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         parsedCommand.Command = CMD_WHEEL_AUTO;
     }
 
-    // additional action: parse wheel number
-    if ((parsedCommand.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
-    {
-        parseParams(command, &parsedCommand);
-        return parsedCommand;
-    }
-
     if (0 == strncmp(command, "lsave", 5))
     {
         parsedCommand.Command = CMD_LEVELS_SAVE;
-        parseParams(command, &parsedCommand);
     }
 
     if (0 == strncmp(command, "lget", 4))
     {
         parsedCommand.Command = CMD_LEVELS_GET;
-        parseParams(command, &parsedCommand);
     }
 
     if (0 == strncmp(command, "lshow", 5))
@@ -275,6 +262,8 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     {
         parsedCommand.Command = CMD_GET_VERSION;
     }
+
+    parseParams(command, &parsedCommand);
 
     return parsedCommand;
 }
