@@ -314,7 +314,7 @@ void sendToExecuteCommand(WheelCommand cmd)
         return;
     }
 
-    if (cmd.Command & WHEEL_COMMAND_TYPE)
+    if ((cmd.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
         if (cmd.Command == CMD_WHEEL_AUTO)
         {
@@ -355,7 +355,8 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if (cmd.Command & LEVELS_COMMAND_TYPE)
+    if ((cmd.Command & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE
+            || (cmd.Command & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
         portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
@@ -365,7 +366,7 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if (cmd.Command & SYSTEM_COMMAND_TYPE)
+    if ((cmd.Command & SYSTEM_COMMAND_TYPE) == SYSTEM_COMMAND_TYPE)
     {
         printText(VERSION);
     }
@@ -400,21 +401,25 @@ void vMemTask( void *pvParameters )
             printText("ERROR in memory task!!!");
         }
 
-        portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
-        levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
-
         if (cmd.Command == CMD_LEVELS_GET)
         {
+            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
+            levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
+
             printLevels(&(cachedLevels[levelNumber]));
         }
 
         if (cmd.Command == CMD_LEVELS_SAVE)
         {
+            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
+            levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
+
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
             {
                 cachedLevels[levelNumber] = currLevel;
                 writeLevels((void*)&cachedLevels);
+
                 printLevels(&currLevel);
                 printText("levels saved to ");
                 printNumber(levelNumber);
@@ -431,7 +436,7 @@ void vMemTask( void *pvParameters )
             }
         }
 
-        if (cmd.Command == CMD_LEVELS_CLEAR)
+        if (cmd.Command == CMD_MEM_CLEAR)
         {
             formatFEE();
         }
