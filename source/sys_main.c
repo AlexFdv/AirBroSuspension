@@ -76,6 +76,7 @@
 #include "os_queue.h"
 #include "os_semphr.h"
 
+#include "Settings.h"
 #include "Levels.h"
 #include "HetConstants.h"
 #include "StringUtils.h"

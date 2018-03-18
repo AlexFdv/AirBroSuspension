@@ -51,8 +51,18 @@ void readLevels(void* levels)
     readSyncFEE(LEVELS_BLOCK_NUMBER, levels, LEVELS_BLOCK_SIZE);
 }
 
+void writeSettings(void* settings)
+{
+    writeSyncFEE(SETTINGS_BLOCK_NUMBER, settings);
+}
+
+void readSettings(void* settings)
+{
+    readSyncFEE(SETTINGS_BLOCK_NUMBER, settings, SETTINGS_BLOCK_SIZE);
+}
+
 // TODO: try use async functions
-void writeSyncFEE(const uint16 blockNumber, uint8* value)
+void writeSyncFEE(const uint16 blockNumber, void* value)
 {
     TI_Fee_WriteSync(blockNumber, value);
 }
