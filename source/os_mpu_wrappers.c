@@ -614,16 +614,7 @@ QueueHandle_t MPU_xQueueCreateCountingSemaphore( const UBaseType_t uxMaxCount, c
 
 /*----------------------------------------------------------------------------*/
 
-#if ( configSUPPORT_STATIC_ALLOCATION == 1 )
-QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount, StaticQueue_t *pxStaticQueue )
-{
-	QueueHandle_t xReturn;
-	BaseType_t xRunningPrivileged = prvRaisePrivilege();
-	xReturn = xQueueCreateCountingSemaphoreStatic( uxMaxCount, uxInitialCount, pxStaticQueue );
-	portRESET_PRIVILEGE( xRunningPrivileged );
-	return xReturn;
-}
-#endif
+
 #endif
 
 /*----------------------------------------------------------------------------*/
