@@ -8,14 +8,17 @@
 #include "os_portmacro.h"
 #include "SerialController.h"
 
+#define SCILIN_REG scilinREG    // output to debug terminal
+#define SCI_REG sciREG          // output via bluetooth
+
+
 void initializeSci()
 {
     sciInit();
 }
 
-void sciDisplayData(const portCHAR *text, portSHORT length)
+void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
 {
-    sciBASE_t *sciReg = scilinREG;
     while (length--)
     {
         uint8 chr = (uint8)(*(text++));
@@ -25,7 +28,15 @@ void sciDisplayData(const portCHAR *text, portSHORT length)
     };
 }
 
-void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
+void sciDisplayData(const portCHAR *text, portSHORT length)
+{
+    sciDisplayDataEx(SCI_REG, text, length);
+
+    // duplicate the output to terminal
+    //sciDisplayDataEx(SCILIN_REG, text, length);
+}
+
+void sciReceiveDataEx(sciBASE_t *sciReg, portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
 {
     const uint32 STOP_CHAR = 0x0D;
 
@@ -33,7 +44,7 @@ void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT
     uint32 ch = 0x00;
     do
     {
-        ch = sciReceiveByte(scilinREG);
+        ch = sciReceiveByte(sciReg);
         if (ch == STOP_CHAR)
             break;
         receivedText[receivedSize] = (portCHAR)ch;
@@ -41,4 +52,9 @@ void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT
     } while (receivedSize < maxLength);
 
     *receivedLength = receivedSize;
+}
+
+void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
+{
+    sciReceiveDataEx(SCI_REG, receivedText, receivedLength, maxLength);
 }

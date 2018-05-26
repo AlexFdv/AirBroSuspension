@@ -136,8 +136,6 @@ LevelValues cachedLevels[LEVELS_COUNT];
 // TODO: move receiving to the interruption
 void vCommandReceiverTask( void *pvParameters )
 {
-
-
     portBASE_TYPE xStatus;
     portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
 
@@ -171,9 +169,9 @@ void vCommandHandlerTask( void *pvParameters )
         xStatus = xQueueReceive(commandsQueueHandle, receivedCommand, portMAX_DELAY);
         if (xStatus == pdTRUE)
         {
-            //printText("Received the command: ");
-            //printText_ex(receivedCommand, strlen(receivedCommand));
-            //printText("\r\n");
+            printText("Received the command: ");
+            printText_ex(receivedCommand, strlen(receivedCommand));
+            printText("\r\n");
 
             WheelCommand command = parseStringCommand(receivedCommand);
             sendToExecuteCommand(command);
