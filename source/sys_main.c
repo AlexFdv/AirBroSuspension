@@ -133,31 +133,6 @@ LevelValues cachedLevels[LEVELS_COUNT];
  * Tasks implementation
 */
 
-// TODO: move receiving to the interruption
-void vCommandReceiverTask( void *pvParameters )
-{
-    portBASE_TYPE xStatus;
-    portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
-
-    for( ;; )
-    {
-        memset(receivedCommand, 0, MAX_COMMAND_LEN);
-        portSHORT receivedLen = 0;
-        sciReceiveData(receivedCommand, &receivedLen, MAX_COMMAND_LEN);
-
-        xStatus = xQueueSendToBack(commandsQueueHandle, receivedCommand, 0);
-        if (xStatus != pdTRUE)
-        {
-            printText("Could not add value to the queue.\r\n");
-        }
-
-        taskYIELD();
-
-        DUMMY_BREAK;
-    }
-    vTaskDelete( NULL );
-}
-
 void vCommandHandlerTask( void *pvParameters )
 {
     portBASE_TYPE xStatus;
@@ -608,12 +583,6 @@ int main(void)
      *  Create tasks for commands receiving and handling
      */
     portBASE_TYPE taskResult = pdFAIL;
-
-    /*taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }*/
 
     taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)

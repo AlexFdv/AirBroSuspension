@@ -72,25 +72,4 @@ void sciDisplayData(const portCHAR *text, portSHORT length)
     //sciDisplayDataEx(SCILIN_REG, text, length);
 }
 
-void sciReceiveDataEx(sciBASE_t *sciReg, portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
-{
-    /*const uint32 STOP_CHAR = 0x0D;
 
-    portSHORT receivedSize = 0;
-    uint32 ch = 0x00;
-    do
-    {
-        ch = sciReceiveByte(sciReg);
-        if (ch == STOP_CHAR)
-            break;
-        receivedText[receivedSize] = (portCHAR)ch;
-        ++receivedSize;
-    } while (receivedSize < maxLength);
-
-    *receivedLength = receivedSize;*/
-}
-
-void sciReceiveData(portCHAR *receivedText, portSHORT *receivedLength, portSHORT maxLength)
-{
-    sciReceiveDataEx(SCI_REG, receivedText, receivedLength, maxLength);
-}
