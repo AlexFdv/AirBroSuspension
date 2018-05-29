@@ -80,7 +80,7 @@
 #include "Levels.h"
 #include "HetConstants.h"
 #include "StringUtils.h"
-#include "Constants.h"
+#include "ConstantsCommon.h"
 
 
 /* USER CODE END */
@@ -573,14 +573,21 @@ void vADCUpdaterTask( void *pvParameters )
     }
 }
 
+void commandReceivedCallbackInterrupt(portCHAR* receivedCommand, portSHORT length)
+{
+    portBASE_TYPE *pxTaskWoken;
+    xQueueSendToBackFromISR(commandsQueueHandle, receivedCommand, pxTaskWoken);
+}
+
 /* USER CODE END */
 
 int main(void)
 {
 /* USER CODE BEGIN (3) */
+    _enable_IRQ();
     gioInit();
     initializeHetPins();
-    initializeSci();
+    initializeSci(&commandReceivedCallbackInterrupt);
 
     commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
 
@@ -602,11 +609,11 @@ int main(void)
      */
     portBASE_TYPE taskResult = pdFAIL;
 
-    taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
+    /*taskResult = xTaskCreate(vCommandReceiverTask, "CommandReceiverTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
     {
         goto ERROR;
-    }
+    }*/
 
     taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)

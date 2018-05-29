@@ -8,14 +8,10 @@
 #ifndef SOURCE_INCLUDES_COMMANDS_H_
 #define SOURCE_INCLUDES_COMMANDS_H_
 
+#include "ConstantsCommon.h"
 #include "sys_common.h"
 #include "string.h"
 #include "FreeRTOS.h"
-#include "Constants.h"
-
-#define MAX_COMMAND_LEN 10
-#define COMMANDS_LIMIT_COUNT 15
-#define COMMAND_ARGS_LIMIT 5
 
 // TODO: move to bitmask, but change getting of wheel using these number from the array(!!!)
 typedef enum

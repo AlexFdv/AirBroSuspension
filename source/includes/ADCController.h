@@ -9,7 +9,7 @@
 #define SOURCE_INCLUDES_ADCCONTROLLER_H_
 
 #include "adc.h"
-#include "Constants.h"
+#include "ConstantsCommon.h"
 
 void initializeADC();
 void startADCConversion(short wheelNumber);
