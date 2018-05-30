@@ -278,6 +278,7 @@ void sendToExecuteCommand(WheelCommand cmd)
 
     if ((cmd.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
+        // detect up or down based on current level values.
         if (cmd.Command == CMD_WHEEL_AUTO)
         {
             LevelValues levels;
@@ -298,6 +299,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                 }
             }
         }
+        // execute for all wheels if there is no arguments
         else if (cmd.argc == 0)
         {
             // for all wheels
@@ -307,6 +309,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                 xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
             }
         }
+        // execute for specific wheel if there is at least one parameter
         else
         {
             WHEEL wheelNo = (WHEEL)cmd.argv[0];
@@ -321,6 +324,7 @@ void sendToExecuteCommand(WheelCommand cmd)
             || (cmd.Command & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
+        // if arguments is empty, then default cell number is 0 (see vMemTask for details).
         portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
         if (xStatus != pdTRUE)
         {
