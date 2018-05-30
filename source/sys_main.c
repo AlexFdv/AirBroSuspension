@@ -107,9 +107,9 @@ xQueueHandle wheelsLevelsQueueHandles[WHEELS_COUNT];
 
 const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
-void printText(const char* text);
-void printNumber(const portSHORT number);
-void printText_ex(const char* text, short maxLen);
+void printTextLin(const char* text);
+void printNumberLin(const portSHORT number);
+void printTextLin_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
@@ -144,16 +144,16 @@ void vCommandHandlerTask( void *pvParameters )
         xStatus = xQueueReceive(commandsQueueHandle, receivedCommand, portMAX_DELAY);
         if (xStatus == pdTRUE)
         {
-            printText("Received the command: ");
-            printText_ex(receivedCommand, strlen(receivedCommand));
-            printText("\r\n");
+            printTextLin("Received the command: ");
+            printTextLin_ex(receivedCommand, strlen(receivedCommand));
+            printTextLin("\r\n");
 
             WheelCommand command = parseStringCommand(receivedCommand);
             sendToExecuteCommand(command);
         }
         else
         {
-            printText("Could not receive a value from the queue.\r\n");
+            printTextLin("Could not receive a value from the queue.\r\n");
         }
 
         DUMMY_BREAK;
@@ -260,7 +260,7 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     {
         if (!getWheelLevelValue(i, &(retLevels->wheels[i])))
         {
-            printText("ERROR reading of level from mem task!!!");
+            printTextLin("ERROR reading of level from mem task!!!");
             return false;
         }
     }
@@ -272,7 +272,7 @@ void sendToExecuteCommand(WheelCommand cmd)
 {
     if (cmd.Command == UNKNOWN_COMMAND)
     {
-        printText("Unknown command received\r\n");
+        printTextLin("Unknown command received\r\n");
         return;
     }
 
@@ -290,8 +290,8 @@ void sendToExecuteCommand(WheelCommand cmd)
                 for (; i< WHEELS_COUNT; ++i)
                 {
                     newCmd.Command = (levels.wheels[i] < savedLevels.wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
-                    newCmd.argv[0] = i;
-                    newCmd.argv[1] = cmd.argv[0];
+                    newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
+                    newCmd.argv[1] = cmd.argv[0];  // level number
                     newCmd.argc = 2;
 
                     xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&newCmd);  // always returns pdTRUE
@@ -324,13 +324,13 @@ void sendToExecuteCommand(WheelCommand cmd)
         portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
         if (xStatus != pdTRUE)
         {
-            printText("Could not add memory command to the queue (it is full).\r\n");
+            printTextLin("Could not add memory command to the queue (it is full).\r\n");
         }
     }
 
     if ((cmd.Command & SYSTEM_COMMAND_TYPE) == SYSTEM_COMMAND_TYPE)
     {
-        printText(VERSION);
+        printTextLin(VERSION);
     }
 }
 
@@ -339,8 +339,8 @@ inline void printLevels(const LevelValues* const levels)
     portSHORT i = 0;
     for (; i < WHEELS_COUNT; ++i)
     {
-        printNumber(levels->wheels[i]);
-        printText("\r\n");
+        printNumberLin(levels->wheels[i]);
+        printTextLin("\r\n");
     }
 }
 
@@ -360,7 +360,7 @@ void vMemTask( void *pvParameters )
         portBASE_TYPE xStatus = xQueueReceive(memoryCommandsQueueHandle, &cmd, timeOut);
         if (xStatus == pdFALSE)
         {
-            printText("ERROR in memory task!!!");
+            printTextLin("ERROR in memory task!!!");
         }
 
         if (cmd.Command == CMD_LEVELS_GET)
@@ -383,9 +383,9 @@ void vMemTask( void *pvParameters )
                 writeLevels((void*)&cachedLevels);
 
                 printLevels(&currLevel);
-                printText("levels saved to ");
-                printNumber(levelNumber);
-                printText("\r\n");
+                printTextLin("levels saved to ");
+                printNumberLin(levelNumber);
+                printTextLin("\r\n");
             }
         }
 
@@ -435,7 +435,7 @@ void vWheelTask( void *pvParameters )
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
         /*if (xStatus == pdFALSE && timeOut == portMAX_DELAY)
         {
-            printText("FUCK ");
+            printTextLin("FUCK ");
         }*/
 
         /*
@@ -465,10 +465,11 @@ void vWheelTask( void *pvParameters )
                     break;
                 default:
                     // do nothing and goto cycle start
-                    printText("Unknown command received");
+                    printTextLin("Unknown command received");
                     continue;
             }
 
+            // check if there is a level limit. If not, just up or down a wheel.
             if (cmd.argc > 1)
             {
                 portSHORT number = cmd.argv[1];
@@ -495,7 +496,7 @@ void vWheelTask( void *pvParameters )
             }
             else
             {
-                printText("ERROR!!! Timeout at level value reading from the queue!!!");
+                printTextLin("ERROR!!! Timeout at level value reading from the queue!!!");
             }
         }
 
@@ -513,7 +514,7 @@ void vWheelTask( void *pvParameters )
         {
             stopWheel(wheelPins);
             timeOut = portMAX_DELAY;
-            levelLimit = -1;
+            levelLimit = -1;   // don't forget to reset for the next incoming command
 
             stopADCConversion(wheelNumber);
         }
@@ -632,11 +633,11 @@ int main(void)
         goto ERROR;
     }
 
-    printText("Controller started\r\n");
+    printTextLin("Controller started\r\n");
     vTaskStartScheduler();
 
 ERROR:
-    printText("Initialization error\r\n");
+    printTextLin("Initialization error\r\n");
     while(1) DUMMY_BREAK;
 
     /* USER CODE END */
@@ -647,22 +648,22 @@ ERROR:
 
 /* USER CODE BEGIN (4) */
 
-//prints the text with terminated null char
-inline void printText(const char* text)
-{
-    printText_ex(text, strlen(text));
-}
-
-inline void printNumber(const portSHORT number)
+inline void printNumberLin(const portSHORT number)
 {
     char buff[10] = {'\0'};
     ltoa(number, buff);
-    printText(buff);
+    printTextLin(buff);
 }
 
-inline void printText_ex(const char* text, const short maxLen)
+//prints the text with terminated null char
+inline void printTextLin(const char* text)
 {
-    sciDisplayData(text, maxLen);
+    printTextLin_ex(text, strlen(text));
+}
+
+inline void printTextLin_ex(const char* text, const short maxLen)
+{
+    sciDisplayDataLin(text, maxLen);
 }
 
 /* USER CODE END */
