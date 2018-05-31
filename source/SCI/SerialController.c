@@ -13,12 +13,11 @@
 #define SCILIN_REG scilinREG    // output to debug terminal
 #define SCI_REG sciREG          // output via bluetooth
 
-typedef void (*Callback)(portCHAR* data, portSHORT length);
 Callback dataReceivedCallback;
 
-portSHORT receivedLen = 0;
-portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
-portCHAR receivedByte;
+short receivedLen = 0;
+uint8 receivedCommand[MAX_COMMAND_LEN] = {'\0'};
+uint8 receivedByte;
 
 #define STOP_CHAR 0x0D
 

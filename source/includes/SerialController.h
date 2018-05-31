@@ -8,8 +8,9 @@
 #ifndef SOURCE_INCLUDES_SERIALCONTROLLER_H_
 #define SOURCE_INCLUDES_SERIALCONTROLLER_H_
 
-void initializeSci();
-void sciDisplayData(const char *text, short length);
-void sciReceiveData(char *outtext, short *receivedLength, short maxLength);
+typedef void (*Callback)(uint8* data, short length);
+
+void initializeSci(Callback dataCallback);
+void sciDisplayDataLin(const char *text, short length);
 
 #endif /* SOURCE_INCLUDES_SERIALCONTROLLER_H_ */

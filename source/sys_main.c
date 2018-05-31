@@ -561,7 +561,7 @@ void vADCUpdaterTask( void *pvParameters )
     }
 }
 
-void commandReceivedCallbackInterrupt(portCHAR* receivedCommand, portSHORT length)
+void commandReceivedCallbackInterrupt(uint8* receivedCommand, short length)
 {
     portBASE_TYPE *pxTaskWoken;
     xQueueSendToBackFromISR(commandsQueueHandle, receivedCommand, pxTaskWoken);
