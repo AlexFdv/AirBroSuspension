@@ -532,11 +532,19 @@ void vWheelTask( void *pvParameters )
     vTaskDelete( NULL );
 }
 
+/*
+ * ADCUpdaterTask always tries to update ADC values by getADCValues.
+ * It can get values when some of the wheels works and calls startADCConversion/stopADCConvesion.
+ * A task pushes to queue an updated values.
+ * Not sure that there is needed some delay. Anyway we should test it.
+ * */
+
 void vADCUpdaterTask( void *pvParameters )
 {
     initializeADC();
 
-    const TickType_t timeDelay = MS_TO_TICKS(30);  // 30 ms
+    // TODO: check the delay (remove it?)
+    const TickType_t timeDelay = MS_TO_TICKS(10);  // 10 ms
 
     adcData_t adc_data[WHEELS_COUNT];
     for( ;; )

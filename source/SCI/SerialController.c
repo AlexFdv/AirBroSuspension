@@ -30,6 +30,7 @@ void initializeSci(Callback dataCallback)
     memset(receivedCommand, 0, MAX_COMMAND_LEN);
 
     sciReceive(SCI_REG, 1, &receivedByte);
+    sciReceive(SCILIN_REG, 1, &receivedByte);
 }
 
 void sciNotification(sciBASE_t *sci, uint32 flags)
@@ -50,7 +51,7 @@ void sciNotification(sciBASE_t *sci, uint32 flags)
         receivedCommand[receivedLen++] = receivedByte;
     } while (0);
 
-    sciReceive(SCI_REG, 1, &receivedByte);
+    sciReceive(sci, 1, &receivedByte);
 }
 
 void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
