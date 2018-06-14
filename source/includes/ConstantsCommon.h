@@ -1,7 +1,7 @@
 /*
  * Constants.h
  *
- *  Created on: 14 жовт. 2017 р.
+ *  Created on: 14 пїЅпїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex
  */
 
@@ -14,6 +14,6 @@
 #define LEVELS_COUNT 3  // BLOCK_SIZE / sizeof(levels)
 #define WHEELS_COUNT 4
 #define DEFAULT_PRIORITY 3
-#define WHEEL_TIMER_TIMEOUT_SEC 5
+#define WHEEL_TIMER_TIMEOUT_SEC 2
 
 #endif /* SOURCE_INCLUDES_CONSTANTSCOMMON_H_ */

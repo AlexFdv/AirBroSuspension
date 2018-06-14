@@ -1,7 +1,7 @@
 /*
  * ADCController.h
  *
- *  Created on: 7 ñ³÷. 2018 ð.
+ *  Created on: 7 ï¿½ï¿½. 2018 ï¿½.
  *      Author: Alex
  */
 
@@ -12,8 +12,6 @@
 #include "ConstantsCommon.h"
 
 void initializeADC();
-void startADCConversion(short wheelNumber);
-void stopADCConversion(short wheelNumber);
 void getADCValues(adcData_t* adcData);
 
 #endif /* SOURCE_INCLUDES_ADCCONTROLLER_H_ */

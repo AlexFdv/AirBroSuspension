@@ -246,9 +246,7 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     // clear to wait for the updated value from the ADCUpdater task.
     xQueueReset(wheelsLevelsQueueHandles[wheelNumber]);
 
-    startADCConversion(wheelNumber);
-    portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(5000));
-    stopADCConversion(wheelNumber);
+    portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(2000));
 
     return (xStatus == pdTRUE);
 }
@@ -447,11 +445,7 @@ void vWheelTask( void *pvParameters )
         */
         if (xStatus == pdTRUE)
         {
-            if (!isWorking)
-            {
-                isWorking = true;
-                startADCConversion(wheelNumber);
-            }
+            isWorking = true;
 
             switch (cmd.Command) {
                 case CMD_WHEEL_UP:
@@ -518,9 +512,7 @@ void vWheelTask( void *pvParameters )
         {
             stopWheel(wheelPins);
             timeOut = portMAX_DELAY;
-            levelLimit = -1;   // don't forget to reset for the next incoming command
-
-            stopADCConversion(wheelNumber);
+            levelLimit = -1;   // we shouldn't forget to reset for the next incoming command
         }
         else
         {
@@ -534,7 +526,6 @@ void vWheelTask( void *pvParameters )
 
 /*
  * ADCUpdaterTask always tries to update ADC values by getADCValues.
- * It can get values when some of the wheels works and calls startADCConversion/stopADCConvesion.
  * A task pushes to queue an updated values.
  * Not sure that there is needed some delay. Anyway we should test it.
  * */
@@ -639,6 +630,9 @@ int main(void)
         goto ERROR;
     }
 
+    /*
+     * ADC converter task
+     */
     taskResult = xTaskCreate(vADCUpdaterTask, "ADCUpdater", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
     {
