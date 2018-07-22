@@ -1,7 +1,7 @@
 /*
  * HetPinsController.h
  *
- *  Created on: 12 бер. 2017 р.
+ *  Created on: 12 пїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex Fadeev
  */
 

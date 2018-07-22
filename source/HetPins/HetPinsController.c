@@ -5,10 +5,10 @@
  *      Author: Alex Fadeev
  */
 
-#include <application/HetConstants.h>
-#include <application/HetPinsController.h>
 #include "gio.h"
 #include "het.h"
+#include <application/HetConstants.h>
+#include <application/HetPinsController.h>
 
 
 void initializeHetPins()

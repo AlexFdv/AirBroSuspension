@@ -8,7 +8,7 @@
 #ifndef SOURCE_INCLUDES_COMMANDS_H_
 #define SOURCE_INCLUDES_COMMANDS_H_
 
-#include "../Application/ConstantsCommon.h"
+#include "ConstantsCommon.h"
 #include "sys_common.h"
 #include "string.h"
 #include "FreeRTOS.h"

@@ -4,11 +4,12 @@
  *  Created on: 18 ���. 2017 �.
  *      Author: Alex
  */
-#include <application/ConstantsCommon.h>
-#include <application/SerialController.h>
+
 #include "sci.h"
 #include "os_portmacro.h"
 #include "string.h"
+#include <application/ConstantsCommon.h>
+#include <application/SerialController.h>
 
 #define SCILIN_REG scilinREG    // output to debug terminal
 #define SCI_REG sciREG          // output via bluetooth
