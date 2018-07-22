@@ -6,7 +6,7 @@
  */
 
 
-#include "ADCController.h"
+#include <application/ADCController.h>
 #include "adc.h"
 
 #include "FreeRTOS.h"

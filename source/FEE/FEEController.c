@@ -1,12 +1,11 @@
 /*
  * FEEController.c
  *
- *  Created on: 15 жовт. 2017 р.
+ *  Created on: 15 пїЅпїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex
  */
 
-#include "FEEController.h"
-
+#include <application/FEEController.h>
 #include "ti_fee.h"
 
 void delay(void)

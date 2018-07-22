@@ -8,7 +8,7 @@
 #ifndef SOURCE_INCLUDES_ADCCONTROLLER_H_
 #define SOURCE_INCLUDES_ADCCONTROLLER_H_
 
-#include "../Application/ConstantsCommon.h"
+#include "../application/ConstantsCommon.h"
 #include "adc.h"
 
 void initializeADC();

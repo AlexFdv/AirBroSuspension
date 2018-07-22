@@ -1,15 +1,15 @@
 /*
  * HetPinsController.cpp
  *
- *  Created on: 12 бер. 2017 р.
+ *  Created on: 12 пїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex Fadeev
  */
 
+#include <application/HetConstants.h>
+#include <application/HetPinsController.h>
 #include "gio.h"
 #include "het.h"
 
-#include "HetConstants.h"
-#include "HetPinsController.h"
 
 void initializeHetPins()
 {

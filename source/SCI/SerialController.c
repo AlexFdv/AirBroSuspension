@@ -1,13 +1,13 @@
 /*
  * SerialController.c
  *
- *  Created on: 18 лип. 2017 р.
+ *  Created on: 18 пїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex
  */
+#include <application/ConstantsCommon.h>
+#include <application/SerialController.h>
 #include "sci.h"
 #include "os_portmacro.h"
-#include "SerialController.h"
-#include "ConstantsCommon.h"
 #include "string.h"
 
 #define SCILIN_REG scilinREG    // output to debug terminal

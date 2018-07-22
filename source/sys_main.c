@@ -65,22 +65,22 @@
 #include "sci.h"
 #include "adc.h"
 
-#include <Application/ADCController.h>
-#include <Application/FEEController.h>
-#include <Application/HetPinsController.h>
-#include <Application/SerialController.h>
-#include <Application/Commands.h>
+#include <application/ADCController.h>
+#include <application/FEEController.h>
+#include <application/HetPinsController.h>
+#include <application/SerialController.h>
+#include <application/Commands.h>
 
 #include "FreeRTOS.h"
 #include "os_task.h"
 #include "os_queue.h"
 #include "os_semphr.h"
 
-#include <Application/Settings.h>
-#include <Application/Levels.h>
-#include <Application/HetConstants.h>
-#include <Application/StringUtils.h>
-#include <Application/ConstantsCommon.h>
+#include <application/Settings.h>
+#include <application/Levels.h>
+#include <application/HetConstants.h>
+#include <application/StringUtils.h>
+#include <application/ConstantsCommon.h>
 
 
 /* USER CODE END */
