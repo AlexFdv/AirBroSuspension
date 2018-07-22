@@ -8,8 +8,8 @@
 #ifndef SOURCE_INCLUDES_ADCCONTROLLER_H_
 #define SOURCE_INCLUDES_ADCCONTROLLER_H_
 
+#include "../Application/ConstantsCommon.h"
 #include "adc.h"
-#include "ConstantsCommon.h"
 
 void initializeADC();
 void getADCValues(adcData_t* adcData);
