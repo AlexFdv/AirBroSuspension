@@ -443,8 +443,8 @@ void vWheelTask( void *pvParameters )
 {
     volatile portBASE_TYPE xStatus;
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
-
     portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+
     xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
 
     WheelStatusStruct wheelStatus =
@@ -525,7 +525,9 @@ void vWheelTask( void *pvParameters )
          * Check timer
          */
         volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus.startTime)/configTICK_RATE_HZ;
-        if (elapsedTimeSec >= WHEEL_TIMER_TIMEOUT_SEC)
+        wheelStatus.isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
+
+        if (!wheelStatus.isWorking)
         {
             stopWheel(wheelStatus.wheelPins);
             ResetWheelStatus(&wheelStatus);
