@@ -421,45 +421,66 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
+typedef struct
+{
+    TickType_t startTime;
+    portSHORT levelLimitValue;
+    portSHORT wheelNumber;
+    bool isWorking;
+    COMMAND_TYPE cmdType;
+} WheelStatusStruct;
+
+void ResetWheelStatus(WheelStatusStruct* status)
+{
+    status->isWorking = false;
+    status->levelLimitValue = -1;
+    status->startTime = 0;
+    status->cmdType = UNKNOWN_COMMAND;
+}
+
 void vWheelTask( void *pvParameters )
 {
     volatile portBASE_TYPE xStatus;
-    volatile TickType_t timeOut = portMAX_DELAY;   // initial value to wait for the command. Then it will be 0 to not block the execution.
-
     WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
 
-    TickType_t startTime = 0;
-    portSHORT levelLimit = -1;
-
-    volatile portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
     xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
 
-    bool isWorking = false;
+    WheelStatusStruct wheelStatus =
+    {
+       .isWorking = false,
+       .levelLimitValue = -1,
+       .wheelNumber = wheelNumber,
+       .startTime = 0,
+       .cmdType = UNKNOWN_COMMAND
+    };
+
     WheelCommand cmd;
     for( ;; )
     {
-        xStatus = xQueueReceive(wheelQueueHandle, &cmd, timeOut);
+        xStatus = xQueueReceive(wheelQueueHandle, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
 
         /*
         * Check for a new command
         */
         if (xStatus == pdTRUE)
         {
-            isWorking = true;
+            wheelStatus.isWorking = true;
+            wheelStatus.startTime = xTaskGetTickCount();
+            wheelStatus.cmdType = cmd.Command;
 
             switch (cmd.Command) {
                 case CMD_WHEEL_UP:
                     stopWheel(wheelPins);
                     openPin(wheelPins.upPin);
-                    startTime = xTaskGetTickCount();
                     break;
                 case CMD_WHEEL_DOWN:
                     stopWheel(wheelPins);
                     openPin(wheelPins.downPin);
-                    startTime = xTaskGetTickCount();
                     break;
                 case CMD_WHEEL_STOP:
-                    isWorking = false;
+                    stopWheel(wheelPins);
+                    ResetWheelStatus(&wheelStatus);
                     break;
                 default:
                     // do nothing and goto cycle start
@@ -471,7 +492,7 @@ void vWheelTask( void *pvParameters )
             if (cmd.argc > 1)
             {
                 portSHORT number = cmd.argv[1];
-                levelLimit = cachedLevels[number].wheels[wheelNumber];
+                wheelStatus.levelLimitValue = cachedLevels[number].wheels[wheelStatus.wheelNumber];
             }
 
         } // end new command
@@ -484,13 +505,13 @@ void vWheelTask( void *pvParameters )
          * If not - continue cycle execution.
          */
 
-        if (levelLimit >= 0)
+        if (wheelStatus.levelLimitValue >= 0)
         {
             uint16 levelValue = 0;
-            xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
+            xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelStatus.wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
             if (xStatus == pdTRUE)
             {
-                isWorking = (cmd.Command == CMD_WHEEL_UP) ? (levelValue < levelLimit) : (levelValue > levelLimit);
+                wheelStatus.isWorking = (wheelStatus.cmdType == CMD_WHEEL_UP) ? (levelValue < wheelStatus.levelLimitValue) : (levelValue > wheelStatus.levelLimitValue);
             }
             else
             {
@@ -501,22 +522,11 @@ void vWheelTask( void *pvParameters )
         /*
          * Check timer
          */
-        volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - startTime)/configTICK_RATE_HZ;
+        volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus.startTime)/configTICK_RATE_HZ;
         if (elapsedTimeSec >= WHEEL_TIMER_TIMEOUT_SEC)
         {
-             isWorking = false;
-        }
-
-        // stop wheel if it is needed
-        if (!isWorking)
-        {
             stopWheel(wheelPins);
-            timeOut = portMAX_DELAY;
-            levelLimit = -1;   // we shouldn't forget to reset for the next incoming command
-        }
-        else
-        {
-            timeOut = 0;   // don't block task on queue next time and execute checks.
+            ResetWheelStatus(&wheelStatus);
         }
 
         DUMMY_BREAK;
