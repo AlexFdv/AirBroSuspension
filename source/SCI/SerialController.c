@@ -65,11 +65,14 @@ void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
     };
 }
 
-void sciDisplayDataLin(const portCHAR *text, portSHORT length)
+void sciDisplayData(const portCHAR *text, portSHORT length)
 {
     sciDisplayDataEx(SCI_REG, text, length);
+}
 
-    // duplicate the output to terminal
+void sciDisplayDataLin(const portCHAR *text, portSHORT length)
+{
+    // output to terminal
     sciDisplayDataEx(SCILIN_REG, text, length);
 }
 

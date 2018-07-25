@@ -1,16 +1,19 @@
 /*
  * SerialController.h
  *
- *  Created on: 18 бер. 2017 р.
+ *  Created on: 18 пїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex
  */
 
 #ifndef SOURCE_INCLUDES_SERIALCONTROLLER_H_
 #define SOURCE_INCLUDES_SERIALCONTROLLER_H_
 
+#include "os_portmacro.h"
+
 typedef void (*Callback)(uint8* data, short length);
 
 void initializeSci(Callback dataCallback);
-void sciDisplayDataLin(const char *text, short length);
+void sciDisplayData(const portCHAR *text, portSHORT length);
+void sciDisplayDataLin(const portCHAR *text, short length);
 
 #endif /* SOURCE_INCLUDES_SERIALCONTROLLER_H_ */
