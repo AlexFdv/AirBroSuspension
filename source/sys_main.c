@@ -423,9 +423,10 @@ inline void stopWheel(WheelPinsStruct wheelPins)
 
 typedef struct
 {
+    WheelPinsStruct wheelPins;
+    portSHORT wheelNumber;
     TickType_t startTime;
     portSHORT levelLimitValue;
-    portSHORT wheelNumber;
     bool isWorking;
     COMMAND_TYPE cmdType;
 } WheelStatusStruct;
@@ -448,9 +449,10 @@ void vWheelTask( void *pvParameters )
 
     WheelStatusStruct wheelStatus =
     {
+       .wheelPins = wheelPins,
+       .wheelNumber = wheelNumber,
        .isWorking = false,
        .levelLimitValue = -1,
-       .wheelNumber = wheelNumber,
        .startTime = 0,
        .cmdType = UNKNOWN_COMMAND
     };
@@ -469,26 +471,26 @@ void vWheelTask( void *pvParameters )
             wheelStatus.startTime = xTaskGetTickCount();
             wheelStatus.cmdType = cmd.Command;
 
-            switch (cmd.Command) {
+            switch (wheelStatus.cmdType) {
                 case CMD_WHEEL_UP:
-                    stopWheel(wheelPins);
-                    openPin(wheelPins.upPin);
+                    stopWheel(wheelStatus.wheelPins);
+                    openPin(wheelStatus.wheelPins.upPin);
                     break;
                 case CMD_WHEEL_DOWN:
-                    stopWheel(wheelPins);
-                    openPin(wheelPins.downPin);
+                    stopWheel(wheelStatus.wheelPins);
+                    openPin(wheelStatus.wheelPins.downPin);
                     break;
                 case CMD_WHEEL_STOP:
-                    stopWheel(wheelPins);
+                    stopWheel(wheelStatus.wheelPins);
                     ResetWheelStatus(&wheelStatus);
-                    break;
+                    continue;
                 default:
                     // do nothing and goto cycle start
                     printText("Unknown command received");
                     continue;
             }
 
-            // check if there is a level limit. If not, just up or down a wheel.
+            // check if there is a level limit value. If not, just up or down a wheel.
             if (cmd.argc > 1)
             {
                 portSHORT number = cmd.argv[1];
@@ -525,7 +527,7 @@ void vWheelTask( void *pvParameters )
         volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus.startTime)/configTICK_RATE_HZ;
         if (elapsedTimeSec >= WHEEL_TIMER_TIMEOUT_SEC)
         {
-            stopWheel(wheelPins);
+            stopWheel(wheelStatus.wheelPins);
             ResetWheelStatus(&wheelStatus);
         }
 
