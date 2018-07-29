@@ -120,7 +120,7 @@ void adcInit(void)
     *     - Enable/Disable channel id in conversion result
     *     - Enable/Disable continuous conversion
     */
-    adcREG1->GxMODECR[1U] = (uint32)ADC_10_BIT
+    adcREG1->GxMODECR[1U] = (uint32)ADC_8_BIT
                           | (uint32)0x00000020U
                           | (uint32)0x00000000U
                           | (uint32)0x00000000U;
@@ -232,14 +232,6 @@ static const uint32 s_adcSelect[2U][3U] =
     0x00000000U |
     0x00000000U |
     0x00000000U,
-    0x00000001U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000000U |
-    0x00000080U |
     0x00000000U |
     0x00000000U |
     0x00000000U |
@@ -248,10 +240,18 @@ static const uint32 s_adcSelect[2U][3U] =
     0x00000000U |
     0x00000000U |
     0x00000000U |
+    0x00000100U |
     0x00000000U |
     0x00000000U |
-    0x00040000U |
-    0x00080000U |
+    0x00000800U |
+    0x00000000U |
+    0x00002000U |
+    0x00004000U |
+    0x00000000U |
+    0x00000000U |
+    0x00000000U |
+    0x00000000U |
+    0x00000000U |
     0x00000000U |
     0x00000000U |
     0x00000000U |
