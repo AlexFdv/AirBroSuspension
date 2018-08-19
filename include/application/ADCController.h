@@ -11,6 +11,10 @@
 #include "../application/ConstantsCommon.h"
 #include "adc.h"
 
+/*
+ * PINS 8, 11, 13, 14
+ * */
+
 void initializeADC();
 void getADCValues(adcData_t* adcData);
 

@@ -125,6 +125,17 @@ typedef struct
     portCHAR downPin;
 } WheelPinsStruct;
 
+
+typedef struct
+{
+    WheelPinsStruct wheelPins;
+    portSHORT wheelNumber;
+    TickType_t startTime;
+    portSHORT levelLimitValue;
+    bool isWorking;
+    COMMAND_TYPE cmdType;
+} WheelStatusStruct;
+
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
 const WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
@@ -421,17 +432,14 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
-typedef struct
+void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
 {
-    WheelPinsStruct wheelPins;
-    portSHORT wheelNumber;
-    TickType_t startTime;
-    portSHORT levelLimitValue;
-    bool isWorking;
-    COMMAND_TYPE cmdType;
-} WheelStatusStruct;
+    wheelStatus->isWorking = true;
+    wheelStatus->startTime = xTaskGetTickCount();
+    wheelStatus->cmdType = cmd->Command;
+}
 
-void ResetWheelStatus(WheelStatusStruct* status)
+void resetWheelStatus(WheelStatusStruct* status)
 {
     status->isWorking = false;
     status->levelLimitValue = -1;
@@ -467,9 +475,7 @@ void vWheelTask( void *pvParameters )
         */
         if (xStatus == pdTRUE)
         {
-            wheelStatus.isWorking = true;
-            wheelStatus.startTime = xTaskGetTickCount();
-            wheelStatus.cmdType = cmd.Command;
+            initializeWheelStatus(&wheelStatus, &cmd);
 
             switch (wheelStatus.cmdType) {
                 case CMD_WHEEL_UP:
@@ -482,7 +488,7 @@ void vWheelTask( void *pvParameters )
                     break;
                 case CMD_WHEEL_STOP:
                     stopWheel(wheelStatus.wheelPins);
-                    ResetWheelStatus(&wheelStatus);
+                    resetWheelStatus(&wheelStatus);
                     continue;
                 default:
                     // do nothing and goto cycle start
@@ -530,7 +536,7 @@ void vWheelTask( void *pvParameters )
         if (!wheelStatus.isWorking)
         {
             stopWheel(wheelStatus.wheelPins);
-            ResetWheelStatus(&wheelStatus);
+            resetWheelStatus(&wheelStatus);
         }
 
         DUMMY_BREAK;
