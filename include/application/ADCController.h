@@ -12,7 +12,7 @@
 #include "adc.h"
 
 /*
- * PINS 8, 11, 13, 14
+ * PINS 8, 11, 13, 14 approved
  * */
 
 void initializeADC();

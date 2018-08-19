@@ -1,26 +1,14 @@
 /*
- * Commands.h
+ * WheelStructs.h
  *
- *  Created on: 27 пїЅпїЅпїЅпїЅ. 2017 пїЅ.
+ *  Created on: 19 серп. 2018 р.
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_COMMANDS_H_
-#define SOURCE_INCLUDES_COMMANDS_H_
+#ifndef INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_
+#define INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_
 
 #include "ConstantsCommon.h"
-#include "sys_common.h"
-#include "string.h"
-#include "FreeRTOS.h"
-
-// TODO: move to bitmask, but change getting of wheel using these number from the array(!!!)
-typedef enum
-{
-    FL_WHEEL = 0,  // front left
-    FR_WHEEL = 1,  // front right
-    BL_WHEEL = 2,  // back left
-    BR_WHEEL = 3   // back right
-} WHEEL;
 
 typedef enum
 {
@@ -53,4 +41,30 @@ typedef struct
     portCHAR argc;
 } WheelCommand;
 
-#endif /* SOURCE_INCLUDES_COMMANDS_H_ */
+// TODO: move to bitmask, but change getting of wheel using these number from the array(!!!)
+typedef enum
+{
+    FL_WHEEL = 0,  // front left
+    FR_WHEEL = 1,  // front right
+    BL_WHEEL = 2,  // back left
+    BR_WHEEL = 3   // back right
+} WHEEL;
+
+typedef struct
+{
+    portCHAR upPin;
+    portCHAR downPin;
+    WHEEL wheel;
+} WheelPinsStruct;
+
+typedef struct
+{
+    bool isWorking;
+    portSHORT wheelNumber;
+    portSHORT levelLimitValue;
+    WheelPinsStruct wheelPins;
+    COMMAND_TYPE cmdType;
+    TickType_t startTime;
+} WheelStatusStruct;
+
+#endif /* INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_ */

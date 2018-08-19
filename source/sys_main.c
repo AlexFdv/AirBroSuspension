@@ -69,7 +69,6 @@
 #include <application/FEEController.h>
 #include <application/HetPinsController.h>
 #include <application/SerialController.h>
-#include <application/Commands.h>
 
 #include "FreeRTOS.h"
 #include "os_task.h"
@@ -81,6 +80,7 @@
 #include <application/HetConstants.h>
 #include <application/StringUtils.h>
 #include <application/ConstantsCommon.h>
+#include <WheelCommandStructs.h>
 
 
 /* USER CODE END */
@@ -117,24 +117,6 @@ void printTextLin_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
-
-typedef struct
-{
-    WHEEL wheel;
-    portCHAR upPin;
-    portCHAR downPin;
-} WheelPinsStruct;
-
-
-typedef struct
-{
-    WheelPinsStruct wheelPins;
-    portSHORT wheelNumber;
-    TickType_t startTime;
-    portSHORT levelLimitValue;
-    bool isWorking;
-    COMMAND_TYPE cmdType;
-} WheelStatusStruct;
 
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
@@ -437,6 +419,14 @@ void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
     wheelStatus->isWorking = true;
     wheelStatus->startTime = xTaskGetTickCount();
     wheelStatus->cmdType = cmd->Command;
+
+    // check if there is a level limit value. If not, just up or down a wheel.
+    if (cmd->argc > 1)
+    {
+        portSHORT number = cmd->argv[1];
+        if (number < LEVELS_COUNT)
+            wheelStatus->levelLimitValue = cachedLevels[number].wheels[wheelStatus->wheelNumber];
+    }
 }
 
 void resetWheelStatus(WheelStatusStruct* status)
@@ -447,13 +437,56 @@ void resetWheelStatus(WheelStatusStruct* status)
     status->cmdType = UNKNOWN_COMMAND;
 }
 
+// TODO: move to separate file as strategy
+void executeWheelLogic(WheelStatusStruct* wheelStatus)
+{
+    /*
+     * Check wheel level
+     *
+     * Here we should check that we are not exceeded a needed level.
+     * If it happens then stop wheel and wait for a new command.
+     * If not - continue cycle execution.
+     */
+
+    if (wheelStatus->levelLimitValue >= 0)
+    {
+        uint16 levelValue = 0;
+        portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelStatus->wheelNumber],
+                             &levelValue, READ_LEVEL_TIMEOUT);
+        if (xStatus == pdTRUE)
+        {
+            wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
+                            (levelValue < wheelStatus->levelLimitValue) :
+                            (levelValue > wheelStatus->levelLimitValue);
+        }
+        else
+        {
+            printText(
+                    "ERROR!!! Timeout at level value reading from the queue!!!");
+        }
+    }
+
+    /*
+     * Check timer
+     */
+    volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
+    wheelStatus->isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
+
+    if (!wheelStatus->isWorking)
+    {
+        stopWheel(wheelStatus->wheelPins);
+        resetWheelStatus(wheelStatus);
+    }
+}
+
 void vWheelTask( void *pvParameters )
 {
-    volatile portBASE_TYPE xStatus;
-    WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
-    portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    portBASE_TYPE xStatus;
+    const WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
+    const portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    const xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
 
-    xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
+    void (*logicFunctionPointer)(WheelStatusStruct* wheelStatus) = executeWheelLogic;
 
     WheelStatusStruct wheelStatus =
     {
@@ -468,6 +501,9 @@ void vWheelTask( void *pvParameters )
     WheelCommand cmd;
     for( ;; )
     {
+        /*
+         * if 'isWorking' then don't wait for the next command, continue execution
+         */
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
 
         /*
@@ -495,49 +531,9 @@ void vWheelTask( void *pvParameters )
                     printText("Unknown command received");
                     continue;
             }
-
-            // check if there is a level limit value. If not, just up or down a wheel.
-            if (cmd.argc > 1)
-            {
-                portSHORT number = cmd.argv[1];
-                wheelStatus.levelLimitValue = cachedLevels[number].wheels[wheelStatus.wheelNumber];
-            }
-
-        } // end new command
-
-        /*
-         * Check wheel level
-         *
-         * Here we should check that we are not exceeded a needed level.
-         * If it happens then stop wheel and wait for a new command.
-         * If not - continue cycle execution.
-         */
-
-        if (wheelStatus.levelLimitValue >= 0)
-        {
-            uint16 levelValue = 0;
-            xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelStatus.wheelNumber], &levelValue, READ_LEVEL_TIMEOUT);
-            if (xStatus == pdTRUE)
-            {
-                wheelStatus.isWorking = (wheelStatus.cmdType == CMD_WHEEL_UP) ? (levelValue < wheelStatus.levelLimitValue) : (levelValue > wheelStatus.levelLimitValue);
-            }
-            else
-            {
-                printText("ERROR!!! Timeout at level value reading from the queue!!!");
-            }
         }
 
-        /*
-         * Check timer
-         */
-        volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus.startTime)/configTICK_RATE_HZ;
-        wheelStatus.isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
-
-        if (!wheelStatus.isWorking)
-        {
-            stopWheel(wheelStatus.wheelPins);
-            resetWheelStatus(&wheelStatus);
-        }
+        logicFunctionPointer(&wheelStatus);
 
         DUMMY_BREAK;
     }
@@ -574,7 +570,7 @@ void vADCUpdaterTask( void *pvParameters )
 
 void commandReceivedCallbackInterrupt(uint8* receivedCommand, short length)
 {
-    portBASE_TYPE *pxTaskWoken;
+    portBASE_TYPE *pxTaskWoken = 0;
     xQueueSendToBackFromISR(commandsQueueHandle, receivedCommand, pxTaskWoken);
 }
 
