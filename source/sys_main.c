@@ -688,6 +688,9 @@ inline void printNumberLin(const portSHORT number)
 inline void printText(const char* text)
 {
     printText_ex(text, strlen(text));
+
+    // duplicate to debug out
+    printTextLin_ex(text, strlen(text));
 }
 
 inline void printTextLin(const char* text)

@@ -52,9 +52,9 @@ typedef enum
 
 typedef struct
 {
+    WHEEL wheel;
     portCHAR upPin;
     portCHAR downPin;
-    WHEEL wheel;
 } WheelPinsStruct;
 
 typedef struct
