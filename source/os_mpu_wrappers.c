@@ -613,7 +613,7 @@ QueueHandle_t MPU_xQueueCreateCountingSemaphore( const UBaseType_t uxMaxCount, c
 }
 
 /*----------------------------------------------------------------------------*/
-#if( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
+#if configSUPPORT_STATIC_ALLOCATION == 1
 QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount, const UBaseType_t uxInitialCount, StaticQueue_t *pxStaticQueue )
 {
 	QueueHandle_t xReturn;

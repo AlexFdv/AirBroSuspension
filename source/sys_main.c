@@ -103,7 +103,7 @@ extern void swiSwitchToMode ( uint32 mode );
 xQueueHandle commandsQueueHandle;
 xQueueHandle memoryCommandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
-xQueueHandle wheelsLevelsQueueHandles[WHEELS_COUNT];
+xQueueHandle adcValuesQueueHandles[ADC_FIFO_SIZE];
 
 const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
@@ -241,9 +241,9 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
     // clear to wait for the updated value from the ADCUpdater task.
-    xQueueReset(wheelsLevelsQueueHandles[wheelNumber]);
+    xQueueReset(adcValuesQueueHandles[wheelNumber]);
 
-    portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(2000));
+    portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(2000));
 
     return (xStatus == pdTRUE);
 }
@@ -307,7 +307,7 @@ void sendToExecuteCommand(WheelCommand cmd)
         // execute for specific wheel if there is at least one parameter
         else
         {
-            WHEEL wheelNo = (WHEEL)cmd.argv[0];
+            WHEEL_IDX wheelNo = (WHEEL_IDX)cmd.argv[0];
             if (wheelNo < WHEELS_COUNT)
             {
                 xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
@@ -451,7 +451,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     if (wheelStatus->levelLimitValue >= 0)
     {
         uint16 levelValue = 0;
-        portBASE_TYPE xStatus = xQueuePeek(wheelsLevelsQueueHandles[wheelStatus->wheelNumber],
+        portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelStatus->wheelNumber],
                              &levelValue, READ_LEVEL_TIMEOUT);
         if (xStatus == pdTRUE)
         {
@@ -553,15 +553,14 @@ void vADCUpdaterTask( void *pvParameters )
     // TODO: check the delay (remove it?)
     const TickType_t timeDelay = MS_TO_TICKS(10);  // 10 ms
 
-    adcData_t adc_data[WHEELS_COUNT];
+    AdcDataValues adc_data;
     for( ;; )
     {
-        getADCValues(&adc_data[0]);
+        getADCDataValues(&adc_data);
 
-        portSHORT i = 0;
-        for (; i< WHEELS_COUNT; ++i)
+        for (portSHORT i = 0; i< WHEELS_COUNT; ++i)
         {
-            xQueueOverwrite(wheelsLevelsQueueHandles[i], &(adc_data[i].value));  // always returns pdTRUE
+            //xQueueOverwrite(adcValuesQueueHandles[i], &(adc_data[i].value));  // always returns pdTRUE
         }
 
         vTaskDelay(timeDelay);
@@ -592,9 +591,9 @@ int main(void)
         wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
     }
 
-    for (i = 0; i< WHEELS_COUNT; ++i)
+    for (i = 0; i< ADC_FIFO_SIZE; ++i)
     {
-        wheelsLevelsQueueHandles[i] = xQueueCreate(1, sizeof(uint16));  // the only value for each wheel
+        adcValuesQueueHandles[i] = xQueueCreate(1, sizeof(ADC_VALUES_TYPE));  // the only value for each wheel
     }
 
     memoryCommandsQueueHandle = xQueueCreate(3, sizeof(WheelCommand));
