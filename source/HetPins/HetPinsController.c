@@ -24,6 +24,8 @@ void initializeHetPins()
     openBits |= (uint32)1U << BACK_RIGHT_UP_PIN;
     openBits |= (uint32)1U << BACK_RIGHT_DOWN_PIN;
 
+    openBits |= (uint32)1U << LED_1_HET_PIN;
+
     gioSetDirection(hetPORT1, openBits);
 }
 

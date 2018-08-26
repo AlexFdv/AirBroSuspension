@@ -142,7 +142,8 @@ void vCommandHandlerTask( void *pvParameters )
         if (xStatus == pdTRUE)
         {
             printText("Received the command: ");
-            printText_ex(receivedCommand, strlen(receivedCommand));
+            //printText_ex(receivedCommand, strlen(receivedCommand));
+            printText(receivedCommand);
             printText("\r\n");
 
             WheelCommand command = parseStringCommand(receivedCommand);
@@ -548,8 +549,6 @@ void vWheelTask( void *pvParameters )
 
 void vADCUpdaterTask( void *pvParameters )
 {
-    initializeADC();
-
     // TODO: check the delay (remove it?)
     const TickType_t timeDelay = MS_TO_TICKS(10);  // 10 ms
 
@@ -560,7 +559,7 @@ void vADCUpdaterTask( void *pvParameters )
 
         for (portSHORT i = 0; i< WHEELS_COUNT; ++i)
         {
-            //xQueueOverwrite(adcValuesQueueHandles[i], &(adc_data[i].value));  // always returns pdTRUE
+            xQueueOverwrite(adcValuesQueueHandles[i], &(adc_data.values[i]));  // always returns pdTRUE
         }
 
         vTaskDelay(timeDelay);
@@ -582,6 +581,7 @@ int main(void)
     gioInit();
     initializeHetPins();
     initializeSci(&commandReceivedCallbackInterrupt);
+    initializeADC();
 
     commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
 
@@ -686,10 +686,12 @@ inline void printNumberLin(const portSHORT number)
 //prints the text with terminated null char
 inline void printText(const char* text)
 {
+    openPin(LED_1_HET_PIN);
     printText_ex(text, strlen(text));
 
     // duplicate to debug out
     printTextLin_ex(text, strlen(text));
+    closePin(LED_1_HET_PIN);
 }
 
 inline void printTextLin(const char* text)

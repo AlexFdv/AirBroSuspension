@@ -23,13 +23,13 @@ static const _idx_value mapper[ADC_FIFO_SIZE] = {
      {BATTERY_IDX, BATTERY_ADC_PIN},
 };
 
-static adcData_t* adcDataBuffer;
+static adcData_t* adcRawDataBuffer;
 
 void initializeADC()
 {
     adcInit();
 
-    adcDataBuffer = (adcData_t*)pvPortMalloc(ADC_FIFO_SIZE * sizeof(adcData_t));
+    adcRawDataBuffer = (adcData_t*)pvPortMalloc(ADC_FIFO_SIZE * sizeof(adcData_t));
 }
 
 void getADCDataValues(AdcDataValues* adcData)
@@ -38,7 +38,7 @@ void getADCDataValues(AdcDataValues* adcData)
     while ((adcIsConversionComplete(adcREG1, adcGROUP1)) == 0)
         ;
 
-    adcGetData(adcREG1, adcGROUP1, adcDataBuffer);
+    adcGetData(adcREG1, adcGROUP1, adcRawDataBuffer);
 
     // map received values
     for (short i = 0; i < ADC_FIFO_SIZE; ++i)
@@ -46,10 +46,10 @@ void getADCDataValues(AdcDataValues* adcData)
         // check pins in mapper array
         for (short j = 0; j < ADC_FIFO_SIZE; ++j)
         {
-            if (adcDataBuffer[i].id == mapper[j].adc_pin)
+            if (adcRawDataBuffer[i].id == mapper[j].adc_pin)
             {
                 short dataIdx = mapper[j].data_idx;
-                adcData->values[dataIdx] = adcDataBuffer[i].value;
+                adcData->values[dataIdx] = adcRawDataBuffer[i].value;
             }
         }
     }
