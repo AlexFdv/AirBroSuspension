@@ -10,6 +10,7 @@
 
 void initializeHetPins();
 void openPin(uint32 pin);
+void togglePin(uint32 pin);
 void closePin(uint32 pin);
 
 #endif /* SOURCE_HETPINS_INCLUDES_HETPINSCONTROLLER_H_ */

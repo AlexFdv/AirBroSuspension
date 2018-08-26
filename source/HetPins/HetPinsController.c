@@ -34,6 +34,11 @@ void openPin(uint32 pin)
     gioSetBit(hetPORT1, pin, 1);
 }
 
+void togglePin(uint32 pin)
+{
+    gioToggleBit(hetPORT1, pin);
+}
+
 void closePin(uint32 pin)
 {
     gioSetBit(hetPORT1, pin, 0);

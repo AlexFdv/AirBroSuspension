@@ -590,6 +590,8 @@ QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType )
 
 /*----------------------------------------------------------------------------*/
 
+#if( configSUPPORT_STATIC_ALLOCATION == 1 ) /* Gong H Add the Compile Switcher */
+
 QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType, StaticQueue_t *pxStaticQueue )
 {
 	QueueHandle_t xReturn;
@@ -598,6 +600,8 @@ QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType, StaticQueu
 	portRESET_PRIVILEGE( xRunningPrivileged );
 	return xReturn;
 }
+#endif
+
 #endif
 
 /*----------------------------------------------------------------------------*/
@@ -788,6 +792,26 @@ TimerHandle_t MPU_xTimerCreateStatic( const char * const pcTimerName, const Tick
 }
 #endif
 
+#if( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) )
+
+   TimerHandle_t MPU_xTimerCreate( const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, const UBaseType_t uxAutoReload, void * const pvTimerID, TimerCallbackFunction_t pxCallbackFunction )
+
+   {
+
+   TimerHandle_t xReturn;
+
+       BaseType_t xRunningPrivileged = prvRaisePrivilege();
+
+       xReturn = xTimerCreate( pcTimerName, xTimerPeriodInTicks, uxAutoReload, pvTimerID, pxCallbackFunction );
+
+       portRESET_PRIVILEGE( xRunningPrivileged );
+
+       return xReturn;
+
+   }
+
+#endif
+
 /*----------------------------------------------------------------------------*/
 
 void *MPU_pvTimerGetTimerID( const TimerHandle_t xTimer )
@@ -832,6 +856,8 @@ TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandle( void )
 
 /*----------------------------------------------------------------------------*/
 
+#if( INCLUDE_xTimerPendFunctionCall == 1 ) /* Gong H add the Compile Switcher, only compile here if INCLUDE_xTimerPendFunctionCall is used */
+
 BaseType_t MPU_xTimerPendFunctionCall( PendedFunction_t xFunctionToPend, void *pvParameter1, uint32_t ulParameter2, TickType_t xTicksToWait )
 {
 	BaseType_t xReturn;
@@ -840,6 +866,8 @@ BaseType_t MPU_xTimerPendFunctionCall( PendedFunction_t xFunctionToPend, void *p
 	portRESET_PRIVILEGE( xRunningPrivileged );
 	return xReturn;
 }
+
+#endif
 
 /*----------------------------------------------------------------------------*/
 

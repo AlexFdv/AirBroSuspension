@@ -11,3 +11,26 @@ QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( ... )
 
 тем самым "окружив" объявление функции MPU_xQueueCreateCountingSemaphoreStatic.
 Этот баг должен быть пофикшен в новых версиях кодогенератора.
+
+
+3. После генерации халкогеном в os_mpu_wrappers.c добавить следующую функцию:
+
+#if( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) )
+
+   TimerHandle_t MPU_xTimerCreate( const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, const UBaseType_t uxAutoReload, void * const pvTimerID, TimerCallbackFunction_t pxCallbackFunction )
+
+   {
+
+   TimerHandle_t xReturn;
+
+       BaseType_t xRunningPrivileged = prvRaisePrivilege();
+
+       xReturn = xTimerCreate( pcTimerName, xTimerPeriodInTicks, uxAutoReload, pvTimerID, pxCallbackFunction );
+
+       portRESET_PRIVILEGE( xRunningPrivileged );
+
+       return xReturn;
+
+   }
+
+#endif

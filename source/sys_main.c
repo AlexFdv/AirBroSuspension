@@ -74,6 +74,7 @@
 #include "os_task.h"
 #include "os_queue.h"
 #include "os_semphr.h"
+#include "os_timer.h"
 
 #include <application/Settings.h>
 #include <application/Levels.h>
@@ -572,6 +573,12 @@ void commandReceivedCallbackInterrupt(uint8* receivedCommand, short length)
     xQueueSendToBackFromISR(commandsQueueHandle, receivedCommand, pxTaskWoken);
 }
 
+
+void vTimerCallbackFunction(xTimerHandle xTimer)
+{
+    togglePin(LED_1_HET_PIN);
+}
+
 /* USER CODE END */
 
 int main(void)
@@ -602,6 +609,7 @@ int main(void)
      *  Create tasks for commands receiving and handling
      */
     portBASE_TYPE taskResult = pdFAIL;
+    xTimerHandle timerHandler = 0;
 
     taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
@@ -653,6 +661,20 @@ int main(void)
     {
         goto ERROR;
     }
+
+    // temporary timer
+    timerHandler = xTimerCreate("SuperTimer", MS_TO_TICKS(500), pdTRUE, 0, vTimerCallbackFunction);
+    if (timerHandler == 0)
+    {
+        goto ERROR;
+    }
+
+    taskResult = xTimerStart(timerHandler, 0);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
 
     printText("Controller started\r\n");
     vTaskStartScheduler();
