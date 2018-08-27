@@ -230,6 +230,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
         parsedCommand.Command = CMD_LEVELS_SHOW;
     }
 
+    if (0 == strncmp(command, "bat", 3))
+    {
+        parsedCommand.Command = CMD_GET_BATTERY;
+    }
+
     if (0 == strncmp(command, "ver", 3))
     {
         parsedCommand.Command = CMD_GET_VERSION;
@@ -246,6 +251,16 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     xQueueReset(adcValuesQueueHandles[wheelNumber]);
 
     portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(2000));
+
+    return (xStatus == pdTRUE);
+}
+
+inline bool getBatteryVoltage(float* const retVoltage)
+{
+    uint16 retValue = 0;
+    portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[BATTERY_IDX], &retValue, MS_TO_TICKS(1000));
+
+    *retVoltage = retValue * 147.0 / 47.0;
 
     return (xStatus == pdTRUE);
 }
@@ -329,9 +344,20 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if ((cmd.Command & SYSTEM_COMMAND_TYPE) == SYSTEM_COMMAND_TYPE)
+    if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
     {
-        printText(VERSION);
+        if (cmd.Command == CMD_GET_VERSION)
+        {
+            printText(VERSION);
+        }
+
+        if (cmd.Command == CMD_GET_BATTERY)
+        {
+            float batteryVoltage = 0;
+            getBatteryVoltage(&batteryVoltage);
+            printText(VERSION);
+        }
+
     }
 }
 
@@ -558,7 +584,7 @@ void vADCUpdaterTask( void *pvParameters )
     {
         getADCDataValues(&adc_data);
 
-        for (portSHORT i = 0; i< WHEELS_COUNT; ++i)
+        for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
         {
             xQueueOverwrite(adcValuesQueueHandles[i], &(adc_data.values[i]));  // always returns pdTRUE
         }
