@@ -109,11 +109,11 @@ xQueueHandle adcValuesQueueHandles[ADC_FIFO_SIZE];
 const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
 void printText(const char* text);
-void printNumber(const portSHORT number);
+void printNumber(const portLONG number);
 void printText_ex(const char* text, short maxLen);
 
 void printTextLin(const char* text);
-void printNumberLin(const portSHORT number);
+void printNumberLin(const portLONG number);
 void printTextLin_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
@@ -255,12 +255,15 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     return (xStatus == pdTRUE);
 }
 
-inline bool getBatteryVoltage(float* const retVoltage)
+inline bool getBatteryVoltage(portLONG* const retVoltage)
 {
     uint16 retValue = 0;
     portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[BATTERY_IDX], &retValue, MS_TO_TICKS(1000));
 
-    *retVoltage = retValue * 147.0 / 47.0;
+    *retVoltage = (portLONG)(retValue *
+                            (5.0 / 255.0) *     // convert to Volts, ADC 8 bit
+                            (147.0 / 47.0) *    // devider 4.7k/14.7k
+                            1000);              // milivolts
 
     return (xStatus == pdTRUE);
 }
@@ -353,9 +356,9 @@ void sendToExecuteCommand(WheelCommand cmd)
 
         if (cmd.Command == CMD_GET_BATTERY)
         {
-            float batteryVoltage = 0;
+            portLONG batteryVoltage = 0;
             getBatteryVoltage(&batteryVoltage);
-            printText(VERSION);
+            printNumber(batteryVoltage);
         }
 
     }
@@ -717,14 +720,14 @@ ERROR:
 
 /* USER CODE BEGIN (4) */
 
-inline void printNumber(const portSHORT number)
+inline void printNumber(const portLONG number)
 {
     char buff[10] = {'\0'};
     ltoa(number, buff);
     printText(buff);
 }
 
-inline void printNumberLin(const portSHORT number)
+inline void printNumberLin(const portLONG number)
 {
     char buff[10] = {'\0'};
     ltoa(number, buff);
