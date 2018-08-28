@@ -260,10 +260,13 @@ inline bool getBatteryVoltage(portLONG* const retVoltage)
     uint16 retValue = 0;
     portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[BATTERY_IDX], &retValue, MS_TO_TICKS(1000));
 
-    *retVoltage = (portLONG)(retValue *
-                            (5.0 / 255.0) *     // convert to Volts, ADC 8 bit
-                            (147.0 / 47.0) *    // devider 4.7k/14.7k
-                            1000);              // milivolts
+    if (xStatus == pdTRUE)
+    {
+        *retVoltage = (portLONG)(retValue *
+                                (5.0 / 255.0) *     // convert to Volts, ADC 8 bit
+                                (147.0 / 47.0) *    // devider 4.7k/14.7k
+                                1000);              // milivolts
+    }
 
     return (xStatus == pdTRUE);
 }
@@ -357,8 +360,10 @@ void sendToExecuteCommand(WheelCommand cmd)
         if (cmd.Command == CMD_GET_BATTERY)
         {
             portLONG batteryVoltage = 0;
-            getBatteryVoltage(&batteryVoltage);
-            printNumber(batteryVoltage);
+            if (getBatteryVoltage(&batteryVoltage))
+                printNumber(batteryVoltage);
+            else
+                printText("ERROR getting battery value.");
         }
 
     }
