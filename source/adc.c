@@ -115,7 +115,7 @@ void adcInit(void)
     adcREG1->EVSAMPDISEN = (uint32)((uint32)0U << 8U)
                          | (uint32)0x00000000U;
 
-    /**   - Setup group 1 conversion mode
+    /** - Setup group 1 conversion mode
     *     - Setup data format
     *     - Enable/Disable channel id in conversion result
     *     - Enable/Disable continuous conversion
