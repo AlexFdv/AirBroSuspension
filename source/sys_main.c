@@ -105,6 +105,8 @@ xQueueHandle commandsQueueHandle;
 xQueueHandle memoryCommandsQueueHandle;
 xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 xQueueHandle adcValuesQueueHandles[ADC_FIFO_SIZE];
+xSemaphoreHandle xCompressorBinarySemaphore;
+
 
 const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
@@ -143,7 +145,6 @@ void vCommandHandlerTask( void *pvParameters )
         if (xStatus == pdTRUE)
         {
             printText("Received the command: ");
-            //printText_ex(receivedCommand, strlen(receivedCommand));
             printText(receivedCommand);
             printText("\r\n");
 
@@ -199,42 +200,47 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     {
         parsedCommand.Command = CMD_WHEEL_UP;
     }
-
+    else
     if (0 == strncmp(command, "down", 4))
     {
         parsedCommand.Command = CMD_WHEEL_DOWN;
     }
-
+    else
     if (0 == strncmp(command, "stop", 4))
     {
         parsedCommand.Command = CMD_WHEEL_STOP;
     }
-
+    else
     if (0 == strncmp(command, "auto", 4))
     {
         parsedCommand.Command = CMD_WHEEL_AUTO;
     }
-
+    else
     if (0 == strncmp(command, "lsave", 5))
     {
         parsedCommand.Command = CMD_LEVELS_SAVE;
     }
-
+    else
     if (0 == strncmp(command, "lget", 4))
     {
         parsedCommand.Command = CMD_LEVELS_GET;
     }
-
+    else
     if (0 == strncmp(command, "lshow", 5))
     {
         parsedCommand.Command = CMD_LEVELS_SHOW;
     }
-
+    else
     if (0 == strncmp(command, "bat", 3))
     {
         parsedCommand.Command = CMD_GET_BATTERY;
     }
-
+    else
+    if (0 == strncmp(command, "compr", 5))
+    {
+        parsedCommand.Command = CMD_COMPRESSOR;
+    }
+    else
     if (0 == strncmp(command, "ver", 3))
     {
         parsedCommand.Command = CMD_GET_VERSION;
@@ -366,6 +372,11 @@ void sendToExecuteCommand(WheelCommand cmd)
                 printText("ERROR getting battery value.");
         }
 
+        if (cmd.Command == CMD_COMPRESSOR)
+        {
+            xSemaphoreGive(xCompressorBinarySemaphore);
+        }
+
     }
 }
 
@@ -437,6 +448,28 @@ void vMemTask( void *pvParameters )
         {
             formatFEE();
         }
+
+        DUMMY_BREAK;
+    }
+
+    vTaskDelete( NULL );
+}
+
+void vCompressorTask( void *pvParameters )
+{
+    const TickType_t timeDelay = MS_TO_TICKS(5000);
+    for(;;)
+    {
+        xSemaphoreTake(xCompressorBinarySemaphore, portMAX_DELAY);
+
+        printText("Compressor on");
+        openPin(COMPRESSOR_HET_PIN);
+
+        // temp delay for tests
+        vTaskDelay(timeDelay);
+
+        printText("Compressor off");
+        closePin(COMPRESSOR_HET_PIN);
 
         DUMMY_BREAK;
     }
@@ -645,6 +678,13 @@ int main(void)
     portBASE_TYPE taskResult = pdFAIL;
     xTimerHandle timerHandler = 0;
 
+    //vSemaphoreCreateBinary(xCompressorBinarySemaphore);
+    xCompressorBinarySemaphore = xSemaphoreCreateBinary();
+    if (xCompressorBinarySemaphore == NULL)
+    {
+        goto ERROR;
+    }
+
     taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
     {
@@ -691,6 +731,15 @@ int main(void)
      * ADC converter task
      */
     taskResult = xTaskCreate(vADCUpdaterTask, "ADCUpdater", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
+    if (taskResult != pdPASS)
+    {
+        goto ERROR;
+    }
+
+    /*
+     * Compressor task
+     */
+    taskResult = xTaskCreate(vCompressorTask, "CompressorTask", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
     if (taskResult != pdPASS)
     {
         goto ERROR;

@@ -12,6 +12,7 @@
 #define BACK_RIGHT_UP_PIN 22
 #define BACK_RIGHT_DOWN_PIN 27
 
+#define COMPRESSOR_HET_PIN 26
 
 #define LED_1_HET_PIN 18
 
