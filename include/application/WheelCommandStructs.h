@@ -48,6 +48,8 @@ typedef struct
     WHEEL_IDX wheel;
     portCHAR upPin;
     portCHAR downPin;
+    portCHAR upPinStatus;
+    portCHAR downPinStatus;
 } WheelPinsStruct;
 
 typedef struct

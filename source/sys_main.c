@@ -81,7 +81,7 @@
 #include <application/HetConstants.h>
 #include <application/StringUtils.h>
 #include <application/ConstantsCommon.h>
-#include <WheelCommandStructs.h>
+#include <application/WheelCommandStructs.h>
 
 
 /* USER CODE END */
@@ -115,10 +115,25 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
 
 // assosiations with pins
-const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN, (portCHAR)FORWARD_LEFT_DOWN_PIN };
-const WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN, (portCHAR)FORWARD_RIGHT_DOWN_PIN };
-const WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN, (portCHAR)BACK_LEFT_DOWN_PIN };
-const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN, (portCHAR)BACK_RIGHT_DOWN_PIN };
+const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
+                                                (portCHAR)FORWARD_LEFT_DOWN_PIN,
+                                                (portCHAR)FORWARD_LEFT_UP_STATUS_PIN,
+                                                (portCHAR)FORWARD_LEFT_DOWN_STATUS_PIN };
+
+const WheelPinsStruct wheelPinsFR = { FR_WHEEL, (portCHAR)FORWARD_RIGHT_UP_PIN,
+                                                (portCHAR)FORWARD_RIGHT_DOWN_PIN,
+                                                (portCHAR)FORWARD_RIGHT_UP_STATUS_PIN,
+                                                (portCHAR)FORWARD_RIGHT_DOWN_STATUS_PIN };
+
+const WheelPinsStruct wheelPinsBL = { BL_WHEEL, (portCHAR)BACK_LEFT_UP_PIN,
+                                                (portCHAR)BACK_LEFT_DOWN_PIN,
+                                                (portCHAR)BACK_LEFT_UP_STATUS_PIN,
+                                                (portCHAR)BACK_LEFT_DOWN_STATUS_PIN };
+
+const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN,
+                                                (portCHAR)BACK_RIGHT_DOWN_PIN,
+                                                (portCHAR)BACK_RIGHT_UP_STATUS_PIN,
+                                                (portCHAR)BACK_RIGHT_DOWN_STATUS_PIN };
 
 LevelValues cachedLevels[LEVELS_COUNT];
 
@@ -514,17 +529,18 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     {
         uint16 levelValue = 0;
         portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelStatus->wheelNumber],
-                             &levelValue, READ_LEVEL_TIMEOUT);
+                                           &levelValue,
+                                           READ_LEVEL_TIMEOUT);
+
         if (xStatus == pdTRUE)
         {
             wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
-                            (levelValue < wheelStatus->levelLimitValue) :
-                            (levelValue > wheelStatus->levelLimitValue);
+                                        (levelValue < wheelStatus->levelLimitValue) :
+                                        (levelValue > wheelStatus->levelLimitValue);
         }
         else
         {
-            printText(
-                    "ERROR!!! Timeout at level value reading from the queue!!!");
+            printText("ERROR!!! Timeout at level value reading from the queue!!!");
         }
     }
 
@@ -533,12 +549,6 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      */
     volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
     wheelStatus->isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
-
-    if (!wheelStatus->isWorking)
-    {
-        stopWheel(wheelStatus->wheelPins);
-        resetWheelStatus(wheelStatus);
-    }
 }
 
 void vWheelTask( void *pvParameters )
@@ -569,7 +579,7 @@ void vWheelTask( void *pvParameters )
         xStatus = xQueueReceive(wheelQueueHandle, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
 
         /*
-        * Check for a new command
+        * New command received
         */
         if (xStatus == pdTRUE)
         {
@@ -579,23 +589,41 @@ void vWheelTask( void *pvParameters )
                 case CMD_WHEEL_UP:
                     stopWheel(wheelStatus.wheelPins);
                     openPin(wheelStatus.wheelPins.upPin);
-                    break;
+                    break;  //switch
                 case CMD_WHEEL_DOWN:
                     stopWheel(wheelStatus.wheelPins);
                     openPin(wheelStatus.wheelPins.downPin);
-                    break;
+                    break;  //switch
                 case CMD_WHEEL_STOP:
                     stopWheel(wheelStatus.wheelPins);
                     resetWheelStatus(&wheelStatus);
-                    continue;
+                    continue;   //loop
                 default:
                     // do nothing and goto cycle start
                     printText("Unknown command received");
-                    continue;
+                    continue; //loop
             }
         }
 
         logicFunctionPointer(&wheelStatus);
+
+        /*
+         * Check status pin
+         * */
+        if ((wheelStatus.cmdType == CMD_WHEEL_UP && getPin(wheelStatus.wheelPins.upPinStatus) != 1)
+            || (wheelStatus.cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus.wheelPins.downPinStatus) != 1))
+        {
+            wheelStatus.isWorking = false;
+        }
+
+        /*
+         * Do we need to stop working, or continue.
+         * */
+        if (!wheelStatus.isWorking)
+        {
+            stopWheel(wheelStatus.wheelPins);
+            resetWheelStatus(&wheelStatus);
+        }
 
         DUMMY_BREAK;
     }

@@ -45,3 +45,8 @@ void closePin(uint32 pin)
 {
     gioSetBit(hetPORT1, pin, 0);
 }
+
+uint32 getPin(uint32 pin)
+{
+    return gioGetBit(hetPORT1, pin);
+}
