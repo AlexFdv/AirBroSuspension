@@ -76,6 +76,7 @@
 #include "os_semphr.h"
 #include "os_timer.h"
 
+#include <application/Diagnostic.h>
 #include <application/Settings.h>
 #include <application/Levels.h>
 #include <application/HetConstants.h>
@@ -100,6 +101,8 @@
 
 // Mode = 0x10 for user and 0x1F for system mode
 extern void swiSwitchToMode ( uint32 mode );
+WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
+void sendToExecuteCommand(WheelCommand);
 
 xQueueHandle commandsQueueHandle;
 xQueueHandle memoryCommandsQueueHandle;
@@ -107,12 +110,8 @@ xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
 xQueueHandle adcValuesQueueHandles[ADC_FIFO_SIZE];
 xSemaphoreHandle xCompressorBinarySemaphore;
 
-
-const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
-
-
-WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
-void sendToExecuteCommand(WheelCommand);
+LevelValues cachedLevels[LEVELS_COUNT];
+Diagnostic diagnostic;
 
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
@@ -135,7 +134,6 @@ const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN,
                                                 (portCHAR)BACK_RIGHT_UP_STATUS_PIN,
                                                 (portCHAR)BACK_RIGHT_DOWN_STATUS_PIN };
 
-LevelValues cachedLevels[LEVELS_COUNT];
 
 /*
  * Tasks implementation
@@ -204,6 +202,12 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
          0
     };
 
+
+    if (0 == strncmp(command, "diag", 4))
+    {
+        parsedCommand.Command = CMD_DIAGNOSTIC;
+    }
+    else
     if (0 == strncmp(command, "up", 2))
     {
         parsedCommand.Command = CMD_WHEEL_UP;
@@ -308,6 +312,35 @@ void sendToExecuteCommand(WheelCommand cmd)
         return;
     }
 
+
+    if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
+    {
+
+        if (cmd.Command == CMD_DIAGNOSTIC)
+        {
+            sciSendData((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
+        }
+
+        if (cmd.Command == CMD_GET_VERSION)
+        {
+            printText(VERSION);
+        }
+
+        if (cmd.Command == CMD_GET_BATTERY)
+        {
+            portLONG batteryVoltage = 0;
+            if (getBatteryVoltage(&batteryVoltage))
+                printNumber(batteryVoltage);
+            else
+                printText("ERROR getting battery value.");
+        }
+
+        if (cmd.Command == CMD_COMPRESSOR)
+        {
+            xSemaphoreGive(xCompressorBinarySemaphore);
+        }
+    }
+
     if ((cmd.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
         // detect up or down based on current level values.
@@ -364,28 +397,6 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
-    {
-        if (cmd.Command == CMD_GET_VERSION)
-        {
-            printText(VERSION);
-        }
-
-        if (cmd.Command == CMD_GET_BATTERY)
-        {
-            portLONG batteryVoltage = 0;
-            if (getBatteryVoltage(&batteryVoltage))
-                printNumber(batteryVoltage);
-            else
-                printText("ERROR getting battery value.");
-        }
-
-        if (cmd.Command == CMD_COMPRESSOR)
-        {
-            xSemaphoreGive(xCompressorBinarySemaphore);
-        }
-
-    }
 }
 
 inline void printLevels(const LevelValues* const levels)
@@ -525,6 +536,8 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * If not - continue cycle execution.
      */
 
+    const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+
     if (wheelStatus->levelLimitValue >= 0)
     {
         uint16 levelValue = 0;
@@ -614,6 +627,12 @@ void vWheelTask( void *pvParameters )
             || (wheelStatus.cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus.wheelPins.downPinStatus) != 1))
         {
             wheelStatus.isWorking = false;
+
+            /*
+             * Array from 0 to 7, from "front left up" to "back right down" wheel.
+             * */
+            diagnostic.wheels_stats[wheelNumber * 2] = getPin(wheelStatus.wheelPins.upPinStatus);
+            diagnostic.wheels_stats[wheelNumber * 2 + 1] = getPin(wheelStatus.wheelPins.downPinStatus);
         }
 
         /*
@@ -677,6 +696,8 @@ int main(void)
     initializeHetPins();
     initializeSci(&commandReceivedCallbackInterrupt);
     initializeADC();
+
+    memset(&diagnostic, 0, sizeof(Diagnostic));
 
     commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
 

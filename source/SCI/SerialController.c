@@ -5,11 +5,13 @@
  *      Author: Alex
  */
 
+#include <stdlib.h>
 #include "sci.h"
 #include "os_portmacro.h"
 #include "string.h"
 #include <application/ConstantsCommon.h>
 #include <application/SerialController.h>
+
 
 #define SCILIN_REG scilinREG    // output to debug terminal
 #define SCI_REG sciREG          // output via bluetooth
@@ -62,6 +64,16 @@ void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
         while ((sciReg->FLR & 0x4) == 4)
             ; /* wait until busy */
         sciSendByte(sciReg, chr); /* send out text */
+    };
+}
+
+void sciSendData(const uint8* data, portSHORT length)
+{
+    while (length--)
+    {
+        while ((sciREG->FLR & 0x4) == 4)
+            ; /* wait until busy */
+        sciSendByte(sciREG, *(data++)); /* send out text */
     };
 }
 
