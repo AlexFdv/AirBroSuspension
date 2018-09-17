@@ -16,4 +16,14 @@ void initializeSci(Callback dataCallback);
 void sciDisplayData(const portCHAR *text, portSHORT length);
 void sciDisplayDataLin(const portCHAR *text, short length);
 
+
+
+void printText(const char* text);
+void printNumber(const portLONG number);
+void printText_ex(const char* text, short maxLen);
+
+void printTextLin(const char* text);
+void printNumberLin(const portLONG number);
+void printTextLin_ex(const char* text, short maxLen);
+
 #endif /* SOURCE_INCLUDES_SERIALCONTROLLER_H_ */

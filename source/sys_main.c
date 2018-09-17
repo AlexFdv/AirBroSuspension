@@ -110,13 +110,6 @@ xSemaphoreHandle xCompressorBinarySemaphore;
 
 const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
-void printText(const char* text);
-void printNumber(const portLONG number);
-void printText_ex(const char* text, short maxLen);
-
-void printTextLin(const char* text);
-void printNumberLin(const portLONG number);
-void printTextLin_ex(const char* text, short maxLen);
 
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
@@ -774,44 +767,5 @@ ERROR:
 
 /* USER CODE BEGIN (4) */
 
-inline void printNumber(const portLONG number)
-{
-    char buff[10] = {'\0'};
-    ltoa(number, buff);
-    printText(buff);
-}
-
-inline void printNumberLin(const portLONG number)
-{
-    char buff[10] = {'\0'};
-    ltoa(number, buff);
-    printTextLin(buff);
-}
-
-//prints the text with terminated null char
-inline void printText(const char* text)
-{
-    openPin(LED_1_HET_PIN);
-    printText_ex(text, strlen(text));
-
-    // duplicate to debug out
-    printTextLin_ex(text, strlen(text));
-    closePin(LED_1_HET_PIN);
-}
-
-inline void printTextLin(const char* text)
-{
-    printTextLin_ex(text, strlen(text));
-}
-
-inline void printText_ex(const char* text, const short maxLen)
-{
-    sciDisplayData(text, maxLen);
-}
-
-inline void printTextLin_ex(const char* text, const short maxLen)
-{
-    sciDisplayDataLin(text, maxLen);
-}
 
 /* USER CODE END */
