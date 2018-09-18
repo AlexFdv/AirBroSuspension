@@ -13,7 +13,15 @@
 #include "os_task.h"
 #include "os_timer.h"
 
-boolean CreateTask(TaskFunction_t task, const char * const pcTaskName, void * const pvParameters, unsigned long priority);
-boolean CreateAndRunTimer(const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, TimerCallbackFunction_t pxCallbackFunction );
+#include "Types.h"
+
+#define MS_TO_TICKS(x) ((x)/portTICK_RATE_MS)
+
+typedef TimerCallbackFunction_t TimerCallbackFunction;
+
+boolean createTask(TaskFunction_t task, const char * const pcTaskName, void * const pvParameters, unsigned long priority);
+void deleteTask();
+boolean createAndRunTimer(const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, TimerCallbackFunction_t pxCallbackFunction );
+void delayTask(TickType_t ticks);
 
 #endif /* INCLUDE_RTOSWRAPPER_RTOS_H_ */

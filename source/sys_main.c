@@ -46,8 +46,6 @@
 
 #define DUMMY_BREAK if (0) break
 
-#define MS_TO_TICKS(x) ((x)/portTICK_RATE_MS)
-
 #define VERSION "0.0.1"
 
 /* USER CODE END */
@@ -71,12 +69,11 @@
 #include <application/SerialController.h>
 
 #include "RtosWrapper/Rtos.h"
+#include "RtosWrapper/RtosSemaphore.h"
+#include "RtosWrapper/RtosQueue.h"
 
 #include "FreeRTOS.h"
-#include "os_task.h"
 #include "os_queue.h"
-#include "os_semphr.h"
-#include "os_timer.h"
 
 #include <application/Diagnostic.h>
 #include <application/Settings.h>
@@ -106,11 +103,12 @@ extern void swiSwitchToMode ( uint32 mode );
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
 
-xQueueHandle commandsQueueHandle;
-xQueueHandle memoryCommandsQueueHandle;
-xQueueHandle wheelsCommandsQueueHandles[WHEELS_COUNT];
-xQueueHandle adcValuesQueueHandles[ADC_FIFO_SIZE];
-xSemaphoreHandle xCompressorBinarySemaphore;
+Queue commandsQueue;
+Queue memoryCommandsQueue;
+Queue wheelsCommandsQueues[WHEELS_COUNT];
+Queue adcValuesQueues[ADC_FIFO_SIZE];
+
+Semaphore compressorSemaphore;
 
 LevelValues cachedLevels[LEVELS_COUNT];
 Diagnostic diagnostic;
@@ -143,14 +141,12 @@ const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN,
 
 void vCommandHandlerTask( void *pvParameters )
 {
-    portBASE_TYPE xStatus;
-
     portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
     for( ;; )
     {
         memset(receivedCommand, 0, MAX_COMMAND_LEN);
-        xStatus = xQueueReceive(commandsQueueHandle, receivedCommand, portMAX_DELAY);
-        if (xStatus == pdTRUE)
+
+        if (receiveFromQueue(commandsQueue, receivedCommand))
         {
             printText("Received the command: ");
             printText(receivedCommand);
@@ -166,7 +162,7 @@ void vCommandHandlerTask( void *pvParameters )
 
         DUMMY_BREAK;
     }
-    vTaskDelete( NULL );
+    deleteTask();
 }
 
 void parseParams(char* strCmd, WheelCommand* const retCommand )
@@ -268,27 +264,26 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
 inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
     // clear to wait for the updated value from the ADCUpdater task.
-    xQueueReset(adcValuesQueueHandles[wheelNumber]);
+    cleanQueue(adcValuesQueues[wheelNumber]);
 
-    portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelNumber], retLevel, MS_TO_TICKS(2000));
-
-    return (xStatus == pdTRUE);
+    return peekFromQueueWithTimeout(adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
 }
 
 inline bool getBatteryVoltage(portLONG* const retVoltage)
 {
-    uint16 retValue = 0;
-    portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[BATTERY_IDX], &retValue, MS_TO_TICKS(1000));
+    uint16 adcValue = 0;
 
-    if (xStatus == pdTRUE)
+    if (peekFromQueueWithTimeout(adcValuesQueues[BATTERY_IDX], &adcValue, MS_TO_TICKS(1000)))
     {
-        *retVoltage = (portLONG)(retValue *
+        *retVoltage = (portLONG)(adcValue *
                                 (5.0 / 255.0) *     // convert to Volts, ADC 8 bit
                                 (147.0 / 47.0) *    // devider 4.7k/14.7k
                                 1000);              // milivolts
+
+        return true;
     }
 
-    return (xStatus == pdTRUE);
+    return false;
 }
 
 inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
@@ -339,7 +334,7 @@ void sendToExecuteCommand(WheelCommand cmd)
 
         if (cmd.Command == CMD_COMPRESSOR)
         {
-            xSemaphoreGive(xCompressorBinarySemaphore);
+            giveSemaphore(compressorSemaphore);
         }
     }
 
@@ -362,7 +357,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                     newCmd.argv[1] = cmd.argv[0];  // level number
                     newCmd.argc = 2;
 
-                    xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&newCmd);  // always returns pdTRUE
+                    sendToQueueOverride(wheelsCommandsQueues[i], (void*)&newCmd); // always returns pdTRUE
                 }
             }
         }
@@ -373,7 +368,7 @@ void sendToExecuteCommand(WheelCommand cmd)
             portCHAR i = 0;
             for (; i< WHEELS_COUNT; ++i)
             {
-                xQueueOverwrite(wheelsCommandsQueueHandles[i], (void*)&cmd);  // always returns pdTRUE
+                sendToQueueOverride(wheelsCommandsQueues[i], (void*)&cmd); // always returns pdTRUE
             }
         }
         // execute for specific wheel if there is at least one parameter
@@ -382,7 +377,7 @@ void sendToExecuteCommand(WheelCommand cmd)
             WHEEL_IDX wheelNo = (WHEEL_IDX)cmd.argv[0];
             if (wheelNo < WHEELS_COUNT)
             {
-                xQueueOverwrite(wheelsCommandsQueueHandles[wheelNo], (void*)&cmd);  // always returns pdTRUE
+                sendToQueueOverride(wheelsCommandsQueues[wheelNo], (void*)&cmd); // always returns pdTRUE
             }
         }
     }
@@ -392,8 +387,7 @@ void sendToExecuteCommand(WheelCommand cmd)
     {
         // add command to the memory task queue: clear, save, print levels.
         // if arguments is empty, then default cell number is 0 (see vMemTask for details).
-        portBASE_TYPE xStatus = xQueueSendToBack(memoryCommandsQueueHandle, (void*)&cmd, 0);
-        if (xStatus != pdTRUE)
+        if (!sendToQueueWithTimeout(memoryCommandsQueue, (void*)&cmd, 0))
         {
             printText("Could not add memory command to the queue (it is full).\r\n");
         }
@@ -420,12 +414,11 @@ void vMemTask( void *pvParameters )
     // update cached levels to actual values
     readLevels((void*)&cachedLevels);
 
-    TickType_t timeOut = portMAX_DELAY;
     WheelCommand cmd;
     for( ;; )
     {
-        portBASE_TYPE xStatus = xQueueReceive(memoryCommandsQueueHandle, &cmd, timeOut);
-        if (xStatus == pdFALSE)
+        boolean result = receiveFromQueue(memoryCommandsQueue,  &cmd);
+        if (!result)
         {
             printText("ERROR in memory task!!!");
         }
@@ -473,21 +466,21 @@ void vMemTask( void *pvParameters )
         DUMMY_BREAK;
     }
 
-    vTaskDelete( NULL );
+    deleteTask();
 }
 
 void vCompressorTask( void *pvParameters )
 {
-    const TickType_t timeDelay = MS_TO_TICKS(5000);
+    const TickType timeDelay = MS_TO_TICKS(5000);
     for(;;)
     {
-        xSemaphoreTake(xCompressorBinarySemaphore, portMAX_DELAY);
+        takeSemaphore(compressorSemaphore);
 
         printText("Compressor on");
         openPin(COMPRESSOR_HET_PIN);
 
         // temp delay for tests
-        vTaskDelay(timeDelay);
+        delayTask(timeDelay);
 
         printText("Compressor off");
         closePin(COMPRESSOR_HET_PIN);
@@ -495,7 +488,7 @@ void vCompressorTask( void *pvParameters )
         DUMMY_BREAK;
     }
 
-    vTaskDelete( NULL );
+    deleteTask();
 }
 
 inline void stopWheel(WheelPinsStruct wheelPins)
@@ -538,16 +531,13 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * If not - continue cycle execution.
      */
 
-    const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+    const TickType READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
     if (wheelStatus->levelLimitValue >= 0)
     {
         uint16 levelValue = 0;
-        portBASE_TYPE xStatus = xQueuePeek(adcValuesQueueHandles[wheelStatus->wheelNumber],
-                                           &levelValue,
-                                           READ_LEVEL_TIMEOUT);
 
-        if (xStatus == pdTRUE)
+        if (peekFromQueueWithTimeout(adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT))
         {
             wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
                                         (levelValue < wheelStatus->levelLimitValue) :
@@ -568,10 +558,9 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
 
 void vWheelTask( void *pvParameters )
 {
-    portBASE_TYPE xStatus;
     const WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
     const portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
-    const xQueueHandle wheelQueueHandle = wheelsCommandsQueueHandles[wheelNumber];
+    const Queue wheelQueue = wheelsCommandsQueues[wheelNumber];
 
     void (*logicFunctionPointer)(WheelStatusStruct* wheelStatus) = executeWheelLogic;
 
@@ -591,12 +580,12 @@ void vWheelTask( void *pvParameters )
         /*
          * if 'isWorking' then don't wait for the next command, continue execution
          */
-        xStatus = xQueueReceive(wheelQueueHandle, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
+        boolean receivedCommand = receiveFromQueueWithTimeout(wheelQueue, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
 
         /*
         * New command received
         */
-        if (xStatus == pdTRUE)
+        if (receivedCommand)
         {
             initializeWheelStatus(&wheelStatus, &cmd);
 
@@ -648,7 +637,8 @@ void vWheelTask( void *pvParameters )
 
         DUMMY_BREAK;
     }
-    vTaskDelete( NULL );
+
+    deleteTask();
 }
 
 /*
@@ -660,7 +650,7 @@ void vWheelTask( void *pvParameters )
 void vADCUpdaterTask( void *pvParameters )
 {
     // TODO: check the delay (remove it?)
-    const TickType_t timeDelay = MS_TO_TICKS(10);  // 10 ms
+    const TickType timeDelay = MS_TO_TICKS(10);  // 10 ms
 
     AdcDataValues adc_data;
     for( ;; )
@@ -669,17 +659,20 @@ void vADCUpdaterTask( void *pvParameters )
 
         for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
         {
-            xQueueOverwrite(adcValuesQueueHandles[i], &(adc_data.values[i]));  // always returns pdTRUE
+            sendToQueueOverride(adcValuesQueues[i], &(adc_data.values[i]));
         }
 
-        vTaskDelay(timeDelay);
+        delayTask(timeDelay);
+
+        DUMMY_BREAK;
     }
+
+    deleteTask();
 }
 
 void commandReceivedCallbackInterrupt(uint8* receivedCommand, short length)
 {
-    portBASE_TYPE *pxTaskWoken = 0;
-    xQueueSendToBackFromISR(commandsQueueHandle, receivedCommand, pxTaskWoken);
+    sendToQueueFromISR(commandsQueue, receivedCommand);
 }
 
 
@@ -701,34 +694,34 @@ int main(void)
 
     memset(&diagnostic, 0, sizeof(Diagnostic));
 
-    commandsQueueHandle = xQueueCreate(5, MAX_COMMAND_LEN);
+    commandsQueue = createQueue(MAX_COMMANDS_QUEUE_LEN, MAX_COMMAND_LEN);
 
     portSHORT i = 0;
     for (; i< WHEELS_COUNT; ++i)
     {
-        wheelsCommandsQueueHandles[i] = xQueueCreate(1, sizeof(WheelCommand));  // the only command for each wheel
+        wheelsCommandsQueues[i] = createQueue(1, sizeof(WheelCommand));  // the only command for each wheel
     }
 
     for (i = 0; i< ADC_FIFO_SIZE; ++i)
     {
-        adcValuesQueueHandles[i] = xQueueCreate(1, sizeof(ADC_VALUES_TYPE));  // the only value for each wheel
+        adcValuesQueues[i] = createQueue(1, sizeof(ADC_VALUES_TYPE));  // the only value for each wheel
     }
 
-    memoryCommandsQueueHandle = xQueueCreate(3, sizeof(WheelCommand));
+    memoryCommandsQueue = createQueue(3, sizeof(WheelCommand));
 
     /*
      *  Create tasks for commands receiving and handling
      */
 
     bool taskResult = true;
-    xCompressorBinarySemaphore = xSemaphoreCreateBinary();
-    if (xCompressorBinarySemaphore == NULL)
+    compressorSemaphore = createBinarySemaphore();
+    if (compressorSemaphore.handle == NULL)
     {
         goto ERROR;
     }
 
 
-    taskResult &= CreateTask(vCommandHandlerTask, "CommandHanlderTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vCommandHandlerTask, "CommandHanlderTask", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
     {
         goto ERROR;
@@ -737,10 +730,10 @@ int main(void)
     /*
      *  Wheels tasks
     */
-    taskResult &= CreateTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, DEFAULT_PRIORITY);
-    taskResult &= CreateTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, DEFAULT_PRIORITY);
-    taskResult &= CreateTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, DEFAULT_PRIORITY);
-    taskResult &= CreateTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, DEFAULT_PRIORITY);
 
     if (!taskResult)
     {
@@ -751,7 +744,7 @@ int main(void)
      * Memory task
      */
 
-    taskResult &= CreateTask(vMemTask, "MemTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vMemTask, "MemTask", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
     {
         goto ERROR;
@@ -760,7 +753,7 @@ int main(void)
     /*
      * ADC converter task
      */
-    taskResult &= CreateTask(vADCUpdaterTask, "ADCUpdater", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vADCUpdaterTask, "ADCUpdater", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
     {
         goto ERROR;
@@ -769,10 +762,10 @@ int main(void)
     /*
      * Compressor task
      */
-    taskResult &= CreateTask(vCompressorTask, "CompressorTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vCompressorTask, "CompressorTask", NULL, DEFAULT_PRIORITY);
 
     // temporary timer
-    taskResult &= CreateAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
+    taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
     if (!taskResult)
     {
         goto ERROR;
