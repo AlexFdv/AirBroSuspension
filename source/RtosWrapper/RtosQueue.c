@@ -15,15 +15,15 @@ Queue createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize)
     return queue;
 }
 
-void cleanQueue(Queue queue)
+void cleanQueue(const Queue* const queue)
 {
-    xQueueReset(queue.handle);
+    xQueueReset(queue->handle);
 }
 
-void sendToQueueFromISR(Queue queue, const void * const pvItemToQueue)
+void sendToQueueFromISR(const Queue* const queue, const void * const pvItemToQueue)
 {
     portBASE_TYPE *pxTaskWoken = 0;
-    xQueueSendToBackFromISR(queue.handle, pvItemToQueue, pxTaskWoken);
+    xQueueSendToBackFromISR(queue->handle, pvItemToQueue, pxTaskWoken);
 }
 
 /*
@@ -33,34 +33,34 @@ void sendToQueueFromISR(Queue queue, const void * const pvItemToQueue)
  * Post an item on a queue.  If the queue is already full then overwrite the
  * value held in the queue.  The item is queued by copy, not by reference.
  */
-void sendToQueueOverride(Queue queue, const void * const pvItemToQueue)
+void sendToQueueOverride(const Queue* const queue, const void * const pvItemToQueue)
 {
-    xQueueOverwrite(queue.handle, pvItemToQueue);
+    xQueueOverwrite(queue->handle, pvItemToQueue);
 }
 
-boolean sendToQueueWithTimeout(Queue queue, void * const pvItemToQueue, TickType xTicksToWait)
+boolean sendToQueueWithTimeout(const Queue * const queue, void * const pvItemToQueue, TickType xTicksToWait)
 {
-    portBASE_TYPE xStatus = xQueueSendToBack(queue.handle, pvItemToQueue, xTicksToWait);
+    portBASE_TYPE xStatus = xQueueSendToBack(queue->handle, pvItemToQueue, xTicksToWait);
 
     return (xStatus == pdTRUE);
 }
 
-boolean receiveFromQueue(Queue queue, void * const pvBuffer)
+boolean receiveFromQueue(const Queue* const queue, void * const pvBuffer)
 {
-    portBASE_TYPE xStatus = xQueueReceive(queue.handle, pvBuffer, portMAX_DELAY);
+    portBASE_TYPE xStatus = xQueueReceive(queue->handle, pvBuffer, portMAX_DELAY);
 
     return (xStatus == pdTRUE);
 }
 
-boolean receiveFromQueueWithTimeout(Queue queue, void * const pvBuffer, TickType xTicksToWait)
+boolean receiveFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
 {
-    portBASE_TYPE xStatus = xQueueReceive(queue.handle, pvBuffer, xTicksToWait);
+    portBASE_TYPE xStatus = xQueueReceive(queue->handle, pvBuffer, xTicksToWait);
     return (xStatus == pdTRUE);
 }
 
-boolean peekFromQueueWithTimeout(Queue queue, void * const pvBuffer, TickType xTicksToWait)
+boolean peekFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
 {
-    portBASE_TYPE xStatus = xQueuePeek(queue.handle, pvBuffer, xTicksToWait);
+    portBASE_TYPE xStatus = xQueuePeek(queue->handle, pvBuffer, xTicksToWait);
 
     return (xStatus == pdTRUE);
 }

@@ -14,12 +14,12 @@ Semaphore createBinarySemaphore()
     return semaphore;
 }
 
-void takeSemaphore(Semaphore semaphore)
+void takeSemaphore(const Semaphore* const semaphore)
 {
-    xSemaphoreTake(semaphore.handle, portMAX_DELAY);
+    xSemaphoreTake(semaphore->handle, portMAX_DELAY);
 }
 
-void giveSemaphore(Semaphore semaphore)
+void giveSemaphore(const Semaphore* const semaphore)
 {
-    xSemaphoreGive(semaphore.handle);
+    xSemaphoreGive(semaphore->handle);
 }

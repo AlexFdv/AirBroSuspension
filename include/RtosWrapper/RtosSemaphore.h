@@ -17,7 +17,7 @@ typedef struct
 } Semaphore;
 
 Semaphore createBinarySemaphore();
-void takeSemaphore(Semaphore semaphore);
-void giveSemaphore(Semaphore semaphore);
+void takeSemaphore(const Semaphore* const semaphore);
+void giveSemaphore(const Semaphore* const semaphore);
 
 #endif /* INCLUDE_RTOSWRAPPER_RTOSSEMAPHORE_H_ */
