@@ -70,6 +70,8 @@
 #include <application/HetPinsController.h>
 #include <application/SerialController.h>
 
+#include "RtosWrapper/Rtos.h"
+
 #include "FreeRTOS.h"
 #include "os_task.h"
 #include "os_queue.h"
@@ -717,18 +719,17 @@ int main(void)
     /*
      *  Create tasks for commands receiving and handling
      */
-    portBASE_TYPE taskResult = pdFAIL;
-    xTimerHandle timerHandler = 0;
 
-    //vSemaphoreCreateBinary(xCompressorBinarySemaphore);
+    bool taskResult = true;
     xCompressorBinarySemaphore = xSemaphoreCreateBinary();
     if (xCompressorBinarySemaphore == NULL)
     {
         goto ERROR;
     }
 
-    taskResult = xTaskCreate(vCommandHandlerTask, "CommandHanlderTask", configMINIMAL_STACK_SIZE, (void*)NULL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
+
+    taskResult &= CreateTask(vCommandHandlerTask, "CommandHanlderTask", NULL, DEFAULT_PRIORITY);
+    if (!taskResult)
     {
         goto ERROR;
     }
@@ -736,26 +737,12 @@ int main(void)
     /*
      *  Wheels tasks
     */
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskFL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
+    taskResult &= CreateTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, DEFAULT_PRIORITY);
+    taskResult &= CreateTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, DEFAULT_PRIORITY);
+    taskResult &= CreateTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, DEFAULT_PRIORITY);
+    taskResult &= CreateTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, DEFAULT_PRIORITY);
 
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskFR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsFR, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskBL", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
-    taskResult = xTaskCreate(vWheelTask, "WheelTaskBR", configMINIMAL_STACK_SIZE, (void*)&wheelPinsBR, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
+    if (!taskResult)
     {
         goto ERROR;
     }
@@ -763,8 +750,9 @@ int main(void)
     /*
      * Memory task
      */
-    taskResult = xTaskCreate(vMemTask, "MemTask", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
+
+    taskResult &= CreateTask(vMemTask, "MemTask", NULL, DEFAULT_PRIORITY);
+    if (!taskResult)
     {
         goto ERROR;
     }
@@ -772,8 +760,8 @@ int main(void)
     /*
      * ADC converter task
      */
-    taskResult = xTaskCreate(vADCUpdaterTask, "ADCUpdater", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
+    taskResult &= CreateTask(vADCUpdaterTask, "ADCUpdater", NULL, DEFAULT_PRIORITY);
+    if (!taskResult)
     {
         goto ERROR;
     }
@@ -781,25 +769,14 @@ int main(void)
     /*
      * Compressor task
      */
-    taskResult = xTaskCreate(vCompressorTask, "CompressorTask", configMINIMAL_STACK_SIZE, NULL, DEFAULT_PRIORITY, NULL);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
+    taskResult &= CreateTask(vCompressorTask, "CompressorTask", NULL, DEFAULT_PRIORITY);
 
     // temporary timer
-    timerHandler = xTimerCreate("SuperTimer", MS_TO_TICKS(500), pdTRUE, 0, vTimerCallbackFunction);
-    if (timerHandler == 0)
+    taskResult &= CreateAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
+    if (!taskResult)
     {
         goto ERROR;
     }
-
-    taskResult = xTimerStart(timerHandler, 0);
-    if (taskResult != pdPASS)
-    {
-        goto ERROR;
-    }
-
 
     printText("Controller started\r\n");
     vTaskStartScheduler();
