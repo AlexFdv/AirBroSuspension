@@ -45,20 +45,20 @@ boolean sendToQueueWithTimeout(const Queue * const queue, void * const pvItemToQ
     return (xStatus == pdTRUE);
 }
 
-boolean receiveFromQueue(const Queue* const queue, void * const pvBuffer)
+boolean popFromQueue(const Queue* const queue, void * const pvBuffer)
 {
     portBASE_TYPE xStatus = xQueueReceive(queue->handle, pvBuffer, portMAX_DELAY);
 
     return (xStatus == pdTRUE);
 }
 
-boolean receiveFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
+boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueueReceive(queue->handle, pvBuffer, xTicksToWait);
     return (xStatus == pdTRUE);
 }
 
-boolean peekFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
+boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueuePeek(queue->handle, pvBuffer, xTicksToWait);
 

@@ -17,6 +17,7 @@
 #define DEFAULT_PRIORITY 3
 #define WHEEL_TIMER_TIMEOUT_SEC 2
 
+// it is better don't change the values, or find usages of it.
 typedef enum
 {
     FL_WHEEL = 0,  // front left

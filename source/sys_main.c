@@ -106,7 +106,9 @@ void sendToExecuteCommand(WheelCommand);
 Queue commandsQueue;
 Queue memoryCommandsQueue;
 Queue wheelsCommandsQueues[WHEELS_COUNT];
+// it has specific order, see ADCController.h(.c)
 Queue adcValuesQueues[ADC_FIFO_SIZE];
+Queue adcAverageQueue;
 
 Semaphore compressorSemaphore;
 
@@ -146,7 +148,7 @@ void vCommandHandlerTask( void *pvParameters )
     {
         memset(receivedCommand, 0, MAX_COMMAND_LEN);
 
-        if (receiveFromQueue(&commandsQueue, receivedCommand))
+        if (popFromQueue(&commandsQueue, receivedCommand))
         {
             printText("Received the command: ");
             printText(receivedCommand);
@@ -261,19 +263,11 @@ WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
     return parsedCommand;
 }
 
-inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
-{
-    // clear to wait for the updated value from the ADCUpdater task.
-    cleanQueue(&adcValuesQueues[wheelNumber]);
-
-    return peekFromQueueWithTimeout(&adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
-}
-
 inline bool getBatteryVoltage(portLONG* const retVoltage)
 {
     uint16 adcValue = 0;
 
-    if (peekFromQueueWithTimeout(&adcValuesQueues[BATTERY_IDX], &adcValue, MS_TO_TICKS(1000)))
+    if (readFromQueueWithTimeout(&adcValuesQueues[BATTERY_IDX], &adcValue, MS_TO_TICKS(1000)))
     {
         *retVoltage = (portLONG)(adcValue *
                                 (5.0 / 255.0) *     // convert to Volts, ADC 8 bit
@@ -284,6 +278,15 @@ inline bool getBatteryVoltage(portLONG* const retVoltage)
     }
 
     return false;
+}
+
+
+inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
+{
+    // clear to wait for the updated value from the ADCUpdater task.
+    //cleanQueue(&adcValuesQueues[wheelNumber]);
+
+    return readFromQueueWithTimeout(&adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
 }
 
 inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
@@ -417,7 +420,7 @@ void vMemTask( void *pvParameters )
     WheelCommand cmd;
     for( ;; )
     {
-        boolean result = receiveFromQueue(&memoryCommandsQueue,  &cmd);
+        boolean result = popFromQueue(&memoryCommandsQueue,  &cmd);
         if (!result)
         {
             printText("ERROR in memory task!!!");
@@ -535,9 +538,9 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
 
     if (wheelStatus->levelLimitValue >= 0)
     {
-        uint16 levelValue = 0;
+        ADC_VALUES_TYPE levelValue = 0;
 
-        if (peekFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT))
+        if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT))
         {
             wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
                                         (levelValue < wheelStatus->levelLimitValue) :
@@ -554,6 +557,21 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      */
     volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
     wheelStatus->isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
+
+    /*
+     * Check status pin
+     * */
+    if ((wheelStatus->cmdType == CMD_WHEEL_UP && getPin(wheelStatus->wheelPins.upPinStatus) != 1)
+        || (wheelStatus->cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus->wheelPins.downPinStatus) != 1))
+    {
+        wheelStatus->isWorking = false;
+
+        /*
+         * Array from 0 to 7, from "front left up" to "back right down" wheel.
+         * */
+        diagnostic.wheels_stats[wheelStatus->wheelNumber * 2] = getPin(wheelStatus->wheelPins.upPinStatus);
+        diagnostic.wheels_stats[wheelStatus->wheelNumber * 2 + 1] = getPin(wheelStatus->wheelPins.downPinStatus);
+    }
 }
 
 void vWheelTask( void *pvParameters )
@@ -580,7 +598,7 @@ void vWheelTask( void *pvParameters )
         /*
          * if 'isWorking' then don't wait for the next command, continue execution
          */
-        boolean receivedCommand = receiveFromQueueWithTimeout(&wheelQueue, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
+        boolean receivedCommand = popFromQueueWithTimeout(&wheelQueue, &cmd, wheelStatus.isWorking ? 0 : portMAX_DELAY);
 
         /*
         * New command received
@@ -610,21 +628,6 @@ void vWheelTask( void *pvParameters )
         }
 
         logicFunctionPointer(&wheelStatus);
-
-        /*
-         * Check status pin
-         * */
-        if ((wheelStatus.cmdType == CMD_WHEEL_UP && getPin(wheelStatus.wheelPins.upPinStatus) != 1)
-            || (wheelStatus.cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus.wheelPins.downPinStatus) != 1))
-        {
-            wheelStatus.isWorking = false;
-
-            /*
-             * Array from 0 to 7, from "front left up" to "back right down" wheel.
-             * */
-            diagnostic.wheels_stats[wheelNumber * 2] = getPin(wheelStatus.wheelPins.upPinStatus);
-            diagnostic.wheels_stats[wheelNumber * 2 + 1] = getPin(wheelStatus.wheelPins.downPinStatus);
-        }
 
         /*
          * Do we need to stop working, or continue.
@@ -661,6 +664,18 @@ void vADCUpdaterTask( void *pvParameters )
         {
             sendToQueueOverride(&adcValuesQueues[i], &(adc_data.values[i]));
         }
+
+        /*
+         * Calculate average value of levels
+         * First 4 is values for wheels.
+         * */
+        ADC_VALUES_TYPE average = 0;
+        for (portSHORT i = 0; i < WHEELS_COUNT; ++i)
+        {
+            average += adc_data.values[i];
+        }
+        average /= WHEELS_COUNT;
+        sendToQueueOverride(&adcAverageQueue, &average);
 
         delayTask(timeDelay);
 
@@ -708,6 +723,7 @@ int main(void)
     }
 
     memoryCommandsQueue = createQueue(3, sizeof(WheelCommand));
+    adcAverageQueue = createQueue(1, sizeof(ADC_VALUES_TYPE));
 
     /*
      *  Create tasks for commands receiving and handling
@@ -716,16 +732,12 @@ int main(void)
     bool taskResult = true;
     compressorSemaphore = createBinarySemaphore();
     if (compressorSemaphore.handle == NULL)
-    {
         goto ERROR;
-    }
 
 
     taskResult &= createTask(vCommandHandlerTask, "CommandHanlderTask", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
-    {
         goto ERROR;
-    }
 
     /*
      *  Wheels tasks
@@ -736,9 +748,7 @@ int main(void)
     taskResult &= createTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, DEFAULT_PRIORITY);
 
     if (!taskResult)
-    {
         goto ERROR;
-    }
 
     /*
      * Memory task
@@ -746,18 +756,14 @@ int main(void)
 
     taskResult &= createTask(vMemTask, "MemTask", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
-    {
         goto ERROR;
-    }
 
     /*
      * ADC converter task
      */
     taskResult &= createTask(vADCUpdaterTask, "ADCUpdater", NULL, DEFAULT_PRIORITY);
     if (!taskResult)
-    {
         goto ERROR;
-    }
 
     /*
      * Compressor task
@@ -767,9 +773,7 @@ int main(void)
     // temporary timer
     taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
     if (!taskResult)
-    {
         goto ERROR;
-    }
 
     printText("Controller started\r\n");
     vTaskStartScheduler();
