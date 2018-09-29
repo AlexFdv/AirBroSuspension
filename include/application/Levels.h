@@ -9,10 +9,11 @@
 #define SOURCE_INCLUDES_LEVELS_H_
 
 #include "ConstantsCommon.h"
+#include "ADCController.h"
 
 typedef struct _LevelValues
 {
-    uint16 wheels[WHEELS_COUNT];
+    ADC_VALUES_TYPE wheels[WHEELS_COUNT];
 } LevelValues;
 
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

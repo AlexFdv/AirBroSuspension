@@ -24,4 +24,7 @@ void deleteTask();
 boolean createAndRunTimer(const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, TimerCallbackFunction_t pxCallbackFunction );
 void delayTask(TickType_t ticks);
 
+void suspendAllTasks();
+boolean resumeAllTasks();
+
 #endif /* INCLUDE_RTOSWRAPPER_RTOS_H_ */

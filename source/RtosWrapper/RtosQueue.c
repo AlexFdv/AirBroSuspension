@@ -7,6 +7,7 @@
 
 #include "RtosQueue.h"
 #include "Types.h"
+#include "os_task.h"
 
 Queue createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize)
 {
@@ -22,8 +23,13 @@ void cleanQueue(const Queue* const queue)
 
 void sendToQueueFromISR(const Queue* const queue, const void * const pvItemToQueue)
 {
-    portBASE_TYPE *pxTaskWoken = 0;
-    xQueueSendToBackFromISR(queue->handle, pvItemToQueue, pxTaskWoken);
+    portBASE_TYPE pxTaskWoken = pdFALSE;
+    xQueueSendToBackFromISR(queue->handle, pvItemToQueue, &pxTaskWoken);
+
+    if (pxTaskWoken == pdTRUE)
+    {
+        taskYIELD();
+    }
 }
 
 /*

@@ -55,3 +55,13 @@ void delayTask(TickType ticks)
     vTaskDelay(ticks);
 }
 
+void suspendAllTasks()
+{
+    vTaskSuspendAll();
+}
+
+boolean resumeAllTasks()
+{
+    return xTaskResumeAll() == pdTRUE;
+}
+

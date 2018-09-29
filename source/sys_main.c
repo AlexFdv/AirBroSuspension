@@ -103,17 +103,20 @@ extern void swiSwitchToMode ( uint32 mode );
 WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
 
-Queue commandsQueue;
-Queue memoryCommandsQueue;
-Queue wheelsCommandsQueues[WHEELS_COUNT];
-// it has specific order, see ADCController.h(.c)
-Queue adcValuesQueues[ADC_FIFO_SIZE];
-Queue adcAverageQueue;
+static Queue commandsQueue;
+static Queue memoryCommandsQueue;
+static Queue wheelsCommandsQueues[WHEELS_COUNT];
+static Queue adcValuesQueues[ADC_FIFO_SIZE];    // adc values have specific order, see ADCController.h(.c)
+static Queue adcAverageQueue;
 
-Semaphore compressorSemaphore;
+static Semaphore compressorSemaphore;
 
-LevelValues cachedLevels[LEVELS_COUNT];
-Diagnostic diagnostic;
+static LevelValues cachedLevels[LEVELS_COUNT];
+static LevelValues* currentTargetLevels;
+static Diagnostic diagnostic;
+
+#define GLOBAL_SYNC_START suspendAllTasks()
+#define GLOBAL_SYNC_END resumeAllTasks()
 
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
@@ -349,24 +352,25 @@ void sendToExecuteCommand(WheelCommand cmd)
             LevelValues levels;
             if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&levels))
             {
-                LevelValues savedLevels = cachedLevels[cmd.argv[0]];
+                portSHORT levelNumber = cmd.argv[0];
+                currentTargetLevels = cachedLevels + levelNumber;
 
                 WheelCommand newCmd;
                 portCHAR i = 0;
                 for (; i< WHEELS_COUNT; ++i)
                 {
-                    if (levels.wheels[i] == savedLevels.wheels[i])
+                    if (levels.wheels[i] == currentTargetLevels->wheels[i])
                         continue;
-                    newCmd.Command = (levels.wheels[i] < savedLevels.wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
+                    newCmd.Command = (levels.wheels[i] < currentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
-                    newCmd.argv[1] = cmd.argv[0];  // level number
+                    newCmd.argv[1] = levelNumber;  // level number
                     newCmd.argc = 2;
 
                     sendToQueueOverride(&wheelsCommandsQueues[i], (void*)&newCmd); // always returns pdTRUE
                 }
             }
         }
-        // execute for all wheels if there is no arguments
+        // execute any other WHEEL_COMMAND_TYPE command for all wheels if there is no arguments
         else if (cmd.argc == 0)
         {
             // for all wheels
@@ -376,7 +380,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                 sendToQueueOverride(&wheelsCommandsQueues[i], (void*)&cmd); // always returns pdTRUE
             }
         }
-        // execute for specific wheel if there is at least one parameter
+        // execute any other WHEEL_COMMAND_TYPE command for specific wheel if there is at least one parameter
         else
         {
             WHEEL_IDX wheelNo = (WHEEL_IDX)cmd.argv[0];
@@ -397,7 +401,6 @@ void sendToExecuteCommand(WheelCommand cmd)
             printText("Could not add memory command to the queue (it is full).\r\n");
         }
     }
-
 }
 
 inline void printLevels(const LevelValues* const levels)
@@ -418,6 +421,7 @@ void vMemTask( void *pvParameters )
 
     // update cached levels to actual values
     readLevels((void*)&cachedLevels);
+    currentTargetLevels = NULL;
 
     WheelCommand cmd;
     for( ;; )
@@ -444,7 +448,10 @@ void vMemTask( void *pvParameters )
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
             {
-                cachedLevels[levelNumber] = currLevel;
+                GLOBAL_SYNC_START;
+                    cachedLevels[levelNumber] = currLevel;
+                GLOBAL_SYNC_END;
+
                 writeLevels((void*)&cachedLevels);
 
                 printLevels(&currLevel);
@@ -461,6 +468,13 @@ void vMemTask( void *pvParameters )
             {
                 printLevels(&currLevel);
             }
+
+            ADC_VALUES_TYPE average = 0;
+            readFromQueueWithTimeout(&adcAverageQueue, &average, 0);
+
+            printText("Average is ");
+            printNumber(average);
+            printText("\r\n");
         }
 
         if (cmd.Command == CMD_MEM_CLEAR)
@@ -494,6 +508,18 @@ void vCompressorTask( void *pvParameters )
     }
 
     deleteTask();
+}
+
+inline void upWheel(WheelPinsStruct wheelPins)
+{
+    openPin(wheelPins.upPin);
+    closePin(wheelPins.downPin);
+}
+
+inline void downWheel(WheelPinsStruct wheelPins)
+{
+    closePin(wheelPins.upPin);
+    openPin(wheelPins.downPin);
 }
 
 inline void stopWheel(WheelPinsStruct wheelPins)
@@ -541,12 +567,39 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     if (wheelStatus->levelLimitValue >= 0)
     {
         ADC_VALUES_TYPE levelValue = 0;
+        ADC_VALUES_TYPE average_delta = 0;
 
-        if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT))
+        if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT)
+                && readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
-            wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
+            /*
+               wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
                                         (levelValue < wheelStatus->levelLimitValue) :
                                         (levelValue > wheelStatus->levelLimitValue);
+            */
+
+            if (average_delta < WHEELS_LEVELS_DEVIATION)
+            {
+                stopWheel(wheelStatus->wheelPins);
+                /*
+                 * do not change wheelStatus->isWorking here. It will setup to false automatically at timeout.
+                 * */
+            }
+            else
+            {
+                if (levelValue < wheelStatus->levelLimitValue)
+                {
+                    upWheel(wheelStatus->wheelPins);
+                }
+                else if (levelValue > wheelStatus->levelLimitValue)
+                {
+                    downWheel(wheelStatus->wheelPins);
+                }
+                else
+                {
+                    stopWheel(wheelStatus->wheelPins);
+                }
+            }
         }
         else
         {
@@ -611,12 +664,10 @@ void vWheelTask( void *pvParameters )
 
             switch (wheelStatus.cmdType) {
                 case CMD_WHEEL_UP:
-                    stopWheel(wheelStatus.wheelPins);
-                    openPin(wheelStatus.wheelPins.upPin);
+                    upWheel(wheelStatus.wheelPins);
                     break;  //switch
                 case CMD_WHEEL_DOWN:
-                    stopWheel(wheelStatus.wheelPins);
-                    openPin(wheelStatus.wheelPins.downPin);
+                    downWheel(wheelStatus.wheelPins);
                     break;  //switch
                 case CMD_WHEEL_STOP:
                     stopWheel(wheelStatus.wheelPins);
@@ -655,7 +706,7 @@ void vWheelTask( void *pvParameters )
 void vADCUpdaterTask( void *pvParameters )
 {
     // TODO: check the delay (remove it?)
-    const TickType timeDelay = MS_TO_TICKS(10);  // 10 ms
+    //const TickType timeDelay = MS_TO_TICKS(10);  // 10 ms
 
     AdcDataValues adc_data;
     for( ;; )
@@ -668,18 +719,25 @@ void vADCUpdaterTask( void *pvParameters )
         }
 
         /*
-         * Calculate average value of levels
+         * Calculate average deviation value of levels
          * First 4 is values for wheels.
          * */
-        ADC_VALUES_TYPE average = 0;
+
+        if (currentTargetLevels == NULL)
+            continue;
+
+        uint32_t average_delta = 0;
         for (portSHORT i = 0; i < WHEELS_COUNT; ++i)
         {
-            average += adc_data.values[i];
+            int32_t diff = (adc_data.values[i] - currentTargetLevels->wheels[i]);
+            average_delta += abs(diff);
         }
-        average /= WHEELS_COUNT;
-        sendToQueueOverride(&adcAverageQueue, &average);
+        average_delta /= WHEELS_COUNT;
 
-        delayTask(timeDelay);
+        ADC_VALUES_TYPE result_value = average_delta;
+        sendToQueueOverride(&adcAverageQueue, &result_value);
+
+        //delayTask(timeDelay);
 
         DUMMY_BREAK;
     }
@@ -737,17 +795,17 @@ int main(void)
         goto ERROR;
 
 
-    taskResult &= createTask(vCommandHandlerTask, "CommandHanlderTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vCommandHandlerTask, "CommandHanlderTask", NULL, TASK_DEFAULT_PRIORITY);
     if (!taskResult)
         goto ERROR;
 
     /*
      *  Wheels tasks
     */
-    taskResult &= createTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, TASK_DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, TASK_DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, TASK_DEFAULT_PRIORITY);
+    taskResult &= createTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, TASK_DEFAULT_PRIORITY);
 
     if (!taskResult)
         goto ERROR;
@@ -756,21 +814,21 @@ int main(void)
      * Memory task
      */
 
-    taskResult &= createTask(vMemTask, "MemTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vMemTask, "MemTask", NULL, TASK_DEFAULT_PRIORITY);
     if (!taskResult)
         goto ERROR;
 
     /*
      * ADC converter task
      */
-    taskResult &= createTask(vADCUpdaterTask, "ADCUpdater", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vADCUpdaterTask, "ADCUpdater", NULL, TASK_DEFAULT_PRIORITY);
     if (!taskResult)
         goto ERROR;
 
     /*
      * Compressor task
      */
-    taskResult &= createTask(vCompressorTask, "CompressorTask", NULL, DEFAULT_PRIORITY);
+    taskResult &= createTask(vCompressorTask, "CompressorTask", NULL, TASK_DEFAULT_PRIORITY);
 
     // temporary timer
     taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
