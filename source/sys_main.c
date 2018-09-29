@@ -355,6 +355,8 @@ void sendToExecuteCommand(WheelCommand cmd)
                 portCHAR i = 0;
                 for (; i< WHEELS_COUNT; ++i)
                 {
+                    if (levels.wheels[i] == savedLevels.wheels[i])
+                        continue;
                     newCmd.Command = (levels.wheels[i] < savedLevels.wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
                     newCmd.argv[1] = cmd.argv[0];  // level number
