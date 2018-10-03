@@ -46,7 +46,7 @@
 
 #define DUMMY_BREAK if (0) break
 
-#define VERSION "0.0.1"
+#define VERSION "0.0.2"
 
 /* USER CODE END */
 
