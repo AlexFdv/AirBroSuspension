@@ -551,7 +551,7 @@ void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
 void resetWheelStatus(WheelStatusStruct* status)
 {
     status->isWorking = false;
-    status->levelLimitValue = -1;
+    status->levelLimitValue = 0;
     status->startTime = 0;
     status->cmdType = UNKNOWN_COMMAND;
 }
@@ -569,7 +569,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
 
     static const TickType READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
-    if (wheelStatus->levelLimitValue >= 0)
+    if (wheelStatus->levelLimitValue > 0)
     {
         AdcValue_t levelValue = 0;
         AdcValue_t average_delta = 0;
@@ -581,16 +581,16 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
             {
                 stopWheel(wheelStatus->wheelPins);
                 /*
-                 * do not change wheelStatus->isWorking here. It will setup to false automatically at timeout.
+                 * do not change wheelStatus->isWorking here to false. It will setup to false automatically at timeout.
                  * */
             }
             else
             {
-                if (levelValue < wheelStatus->levelLimitValue)
+                if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_DEVIATION/4))
                 {
                     upWheel(wheelStatus->wheelPins);
                 }
-                else if (levelValue > wheelStatus->levelLimitValue)
+                else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_DEVIATION/4))
                 {
                     downWheel(wheelStatus->wheelPins);
                 }
@@ -642,7 +642,7 @@ void vWheelTask( void *pvParameters )
        .wheelPins = wheelPins,
        .wheelNumber = wheelNumber,
        .isWorking = false,
-       .levelLimitValue = -1,
+       .levelLimitValue = 0,
        .startTime = 0,
        .cmdType = UNKNOWN_COMMAND
     };

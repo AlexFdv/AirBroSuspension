@@ -9,6 +9,7 @@
 #define INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_
 
 #include "ConstantsCommon.h"
+#include "ADCController.h"
 
 typedef enum
 {
@@ -57,7 +58,7 @@ typedef struct
 {
     bool isWorking;
     portSHORT wheelNumber;
-    portSHORT levelLimitValue;
+    AdcValue_t levelLimitValue;
     WheelPinsStruct wheelPins;
     COMMAND_TYPE cmdType;
     TickType_t startTime;
