@@ -287,9 +287,6 @@ inline bool getBatteryVoltage(portLONG* const retVoltage)
 
 inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
-    // clear to wait for the updated value from the ADCUpdater task.
-    //cleanQueue(&adcValuesQueues[wheelNumber]);
-
     return readFromQueueWithTimeout(&adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
 }
 
@@ -358,9 +355,10 @@ void sendToExecuteCommand(WheelCommand cmd)
             LevelValues levels;
             if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&levels))
             {
-                portSHORT levelNumber = cmd.argv[0];
-                currentTargetLevels = cachedLevels + levelNumber;
+                portSHORT savedLevelNumber = cmd.argv[0];
+                currentTargetLevels = cachedLevels + savedLevelNumber;
 
+                // translate to new command, where the first argument is a wheel number
                 WheelCommand newCmd;
                 portCHAR i = 0;
                 for (; i< WHEELS_COUNT; ++i)
@@ -369,14 +367,21 @@ void sendToExecuteCommand(WheelCommand cmd)
                         continue;
                     newCmd.Command = (levels.wheels[i] < currentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
-                    newCmd.argv[1] = levelNumber;  // level number
-                    newCmd.argc = 2;
+                    newCmd.argv[1] = savedLevelNumber;  // level number
+                    newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value to auto mode. For single wheel see the execution task.
+
+                    // check the timeout param (in seconds)
+                    if (cmd.argc > 1)
+                    {
+                        newCmd.argv[2] = cmd.argv[1];
+                    }
+                    newCmd.argc = 3;
 
                     sendToQueueOverride(&wheelsCommandsQueues[i], (void*)&newCmd); // always returns pdTRUE
                 }
             }
         }
-        // execute any other WHEEL_COMMAND_TYPE command for all wheels if there is no arguments
+        // execute any other WHEEL_COMMAND_TYPE command for all wheels if there is no arguments (up, down or stop)
         else if (cmd.argc == 0)
         {
             // for all wheels
@@ -386,7 +391,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                 sendToQueueOverride(&wheelsCommandsQueues[i], (void*)&cmd); // always returns pdTRUE
             }
         }
-        // execute any other WHEEL_COMMAND_TYPE command for specific wheel if there is at least one parameter
+        // execute any other WHEEL_COMMAND_TYPE command for specific wheel if there is at least one parameter (up, down or stop)
         else
         {
             WHEEL_IDX wheelNo = (WHEEL_IDX)cmd.argv[0];
@@ -538,13 +543,21 @@ void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
     wheelStatus->isWorking = true;
     wheelStatus->startTime = xTaskGetTickCount();
     wheelStatus->cmdType = cmd->Command;
+    wheelStatus->timeoutSec = WHEEL_TIMER_SINGLE_TIMEOUT_SEC;
 
     // check if there is a level limit value. If not, just up or down a wheel.
-    if (cmd->argc > 1)
+    if (cmd->argc >= 2)
     {
-        portSHORT number = cmd->argv[1];
-        if (number < LEVELS_COUNT)
-            wheelStatus->levelLimitValue = cachedLevels[number].wheels[wheelStatus->wheelNumber];
+        portSHORT savedLevelNumber = cmd->argv[1];
+        if (savedLevelNumber < LEVELS_COUNT)
+            wheelStatus->levelLimitValue = cachedLevels[savedLevelNumber].wheels[wheelStatus->wheelNumber];
+    }
+
+    // check if there is a timeout specified (in seconds)
+    if (cmd->argc >= 3)
+    {
+        portSHORT seconds = cmd->argv[2];
+        wheelStatus->timeoutSec = seconds;
     }
 }
 
@@ -632,7 +645,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
 void vWheelTask( void *pvParameters )
 {
     const WheelPinsStruct wheelPins = *(WheelPinsStruct*)pvParameters;
-    const portSHORT wheelNumber = (portSHORT)wheelPins.wheel;
+    const WHEEL_IDX wheelNumber = wheelPins.wheel;
     const Queue wheelQueue = wheelsCommandsQueues[wheelNumber];
 
     void (*logicFunctionPointer)(WheelStatusStruct* wheelStatus) = executeWheelLogic;
@@ -644,7 +657,7 @@ void vWheelTask( void *pvParameters )
        .isWorking = false,
        .levelLimitValue = 0,
        .startTime = 0,
-       .cmdType = UNKNOWN_COMMAND
+       .cmdType = UNKNOWN_COMMAND,
     };
 
     WheelCommand cmd;
@@ -705,9 +718,6 @@ void vWheelTask( void *pvParameters )
 
 void vADCUpdaterTask( void *pvParameters )
 {
-    // TODO: check the delay (remove it?)
-    //const TickType timeDelay = MS_TO_TICKS(10);  // 10 ms
-
     AdcDataValues adc_data;
     for( ;; )
     {
@@ -736,8 +746,6 @@ void vADCUpdaterTask( void *pvParameters )
 
         AdcValue_t result_value = (AdcValue_t)average_delta;
         sendToQueueOverride(&adcAverageQueue, &result_value);
-
-        //delayTask(timeDelay);
 
         DUMMY_BREAK;
     }

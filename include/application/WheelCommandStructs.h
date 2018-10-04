@@ -57,7 +57,8 @@ typedef struct
 typedef struct
 {
     bool isWorking;
-    portSHORT wheelNumber;
+    WHEEL_IDX wheelNumber;
+    portSHORT timeoutSec;
     AdcValue_t levelLimitValue;
     WheelPinsStruct wheelPins;
     COMMAND_TYPE cmdType;
