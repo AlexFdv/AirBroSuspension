@@ -1,19 +1,21 @@
 /*
  * RtosQueue.c
  *
- *  Created on: 18 вер. 2018 р.
+ *  Created on: 18 пїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
 #include "RtosQueue.h"
 #include "Types.h"
 #include "os_task.h"
+#include <stdlib.h>
 
 Queue createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize)
 {
-    Queue queue;
-    queue.handle = xQueueCreate(uxQueueLength, uxItemSize);
-    return queue;
+    //@fixme: memory leak!!! The better way is to pass a pointer to the queue as an argument
+    Queue* queue = (Queue*)malloc(sizeof(Queue));
+    queue->handle = xQueueCreate(uxQueueLength, uxItemSize);
+    return *queue;
 }
 
 void cleanQueue(const Queue* const queue)
