@@ -586,11 +586,11 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
             }
             else
             {
-                if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_DEVIATION/4))
+                if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_THRESHOLD))
                 {
                     upWheel(wheelStatus->wheelPins);
                 }
-                else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_DEVIATION/4))
+                else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_THRESHOLD))
                 {
                     downWheel(wheelStatus->wheelPins);
                 }
