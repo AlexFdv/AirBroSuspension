@@ -562,7 +562,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * If not - continue cycle execution.
      */
 
-    const TickType READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+    static const TickType READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
     if (wheelStatus->levelLimitValue >= 0)
     {
@@ -572,12 +572,6 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
         if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT)
                 && readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
-            /*
-               wheelStatus->isWorking = (wheelStatus->cmdType == CMD_WHEEL_UP) ?
-                                        (levelValue < wheelStatus->levelLimitValue) :
-                                        (levelValue > wheelStatus->levelLimitValue);
-            */
-
             if (average_delta < WHEELS_LEVELS_DEVIATION)
             {
                 stopWheel(wheelStatus->wheelPins);
@@ -603,6 +597,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
         }
         else
         {
+            /* If you see this message, then you have a problems... */
             printText("ERROR!!! Timeout at level value reading from the queue!!!");
         }
     }
@@ -734,7 +729,7 @@ void vADCUpdaterTask( void *pvParameters )
         }
         average_delta /= WHEELS_COUNT;
 
-        ADC_VALUES_TYPE result_value = average_delta;
+        ADC_VALUES_TYPE result_value = (ADC_VALUES_TYPE)average_delta;
         sendToQueueOverride(&adcAverageQueue, &result_value);
 
         //delayTask(timeDelay);
