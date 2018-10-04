@@ -368,7 +368,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                     newCmd.Command = (levels.wheels[i] < currentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
                     newCmd.argv[1] = savedLevelNumber;  // level number
-                    newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value to auto mode. For single wheel see the execution task.
+                    newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value for auto mode. For single mode timeout is in execution task.
 
                     // check the timeout param (in seconds)
                     if (cmd.argc > 1)
@@ -624,7 +624,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * Check timer
      */
     volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
-    wheelStatus->isWorking = (elapsedTimeSec < WHEEL_TIMER_TIMEOUT_SEC);
+    wheelStatus->isWorking = (elapsedTimeSec < wheelStatus->timeoutSec);
 
     /*
      * Check status pin
