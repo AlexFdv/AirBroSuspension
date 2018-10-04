@@ -110,6 +110,7 @@ static Queue adcValuesQueues[ADC_FIFO_SIZE];    // adc values have specific orde
 static Queue adcAverageQueue;
 
 static Semaphore compressorSemaphore;
+static portSHORT compressorTimeoutSec;
 
 static LevelValues cachedLevels[LEVELS_COUNT];
 static LevelValues* currentTargetLevels;
@@ -340,6 +341,11 @@ void sendToExecuteCommand(WheelCommand cmd)
 
         if (cmd.Command == CMD_COMPRESSOR)
         {
+            compressorTimeoutSec = 5;   // default value for compressor 3 seconds
+            if (cmd.argc > 0)
+            {
+                compressorTimeoutSec = cmd.argv[0];
+            }
             giveSemaphore(&compressorSemaphore);
         }
     }
@@ -469,7 +475,7 @@ void vMemTask( void *pvParameters )
                 printLevels(&currLevel);
             }
 
-            ADC_VALUES_TYPE average = 0;
+            AdcValue_t average = 0;
             readFromQueueWithTimeout(&adcAverageQueue, &average, 0);
 
             printText("Average is ");
@@ -490,7 +496,6 @@ void vMemTask( void *pvParameters )
 
 void vCompressorTask( void *pvParameters )
 {
-    const TickType timeDelay = MS_TO_TICKS(5000);
     for(;;)
     {
         takeSemaphore(&compressorSemaphore);
@@ -499,7 +504,7 @@ void vCompressorTask( void *pvParameters )
         openPin(COMPRESSOR_HET_PIN);
 
         // temp delay for tests
-        delayTask(timeDelay);
+        delayTask(MS_TO_TICKS(compressorTimeoutSec * 1000));
 
         printText("Compressor off");
         closePin(COMPRESSOR_HET_PIN);
@@ -566,8 +571,8 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
 
     if (wheelStatus->levelLimitValue >= 0)
     {
-        ADC_VALUES_TYPE levelValue = 0;
-        ADC_VALUES_TYPE average_delta = 0;
+        AdcValue_t levelValue = 0;
+        AdcValue_t average_delta = 0;
 
         if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT)
                 && readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
@@ -729,7 +734,7 @@ void vADCUpdaterTask( void *pvParameters )
         }
         average_delta /= WHEELS_COUNT;
 
-        ADC_VALUES_TYPE result_value = (ADC_VALUES_TYPE)average_delta;
+        AdcValue_t result_value = (AdcValue_t)average_delta;
         sendToQueueOverride(&adcAverageQueue, &result_value);
 
         //delayTask(timeDelay);
@@ -764,21 +769,21 @@ int main(void)
 
     memset(&diagnostic, 0, sizeof(Diagnostic));
 
-    commandsQueue = createQueue(MAX_COMMANDS_QUEUE_LEN, MAX_COMMAND_LEN);
+    createQueue(MAX_COMMANDS_QUEUE_LEN, MAX_COMMAND_LEN, &commandsQueue);
 
     portSHORT i = 0;
     for (; i< WHEELS_COUNT; ++i)
     {
-        wheelsCommandsQueues[i] = createQueue(1, sizeof(WheelCommand));  // the only command for each wheel
+        createQueue(1, sizeof(WheelCommand), wheelsCommandsQueues + i);  // the only command for each wheel
     }
 
     for (i = 0; i< ADC_FIFO_SIZE; ++i)
     {
-        adcValuesQueues[i] = createQueue(1, sizeof(ADC_VALUES_TYPE));  // the only value for each wheel
+        createQueue(1, sizeof(AdcValue_t), adcValuesQueues + i);  // the only value for each wheel
     }
 
-    memoryCommandsQueue = createQueue(3, sizeof(WheelCommand));
-    adcAverageQueue = createQueue(1, sizeof(ADC_VALUES_TYPE));
+    createQueue(3, sizeof(WheelCommand), &memoryCommandsQueue);
+    createQueue(1, sizeof(AdcValue_t), &adcAverageQueue);
 
     /*
      *  Create tasks for commands receiving and handling

@@ -19,7 +19,7 @@ typedef struct
     xQueueHandle handle;
 } Queue;
 
-Queue createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize);
+void createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize, Queue* out);
 void cleanQueue(const Queue* const queue);
 void sendToQueueFromISR(const Queue* const queue, const void * const pvItemToQueue);
 void sendToQueueOverride(const Queue* const queue, const void * const pvItemToQueue);

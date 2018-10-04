@@ -13,7 +13,7 @@
 
 typedef struct _LevelValues
 {
-    ADC_VALUES_TYPE wheels[WHEELS_COUNT];
+    AdcValue_t wheels[WHEELS_COUNT];
 } LevelValues;
 
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

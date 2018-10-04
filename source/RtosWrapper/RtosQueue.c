@@ -10,12 +10,9 @@
 #include "os_task.h"
 #include <stdlib.h>
 
-Queue createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize)
+void createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize, Queue* out)
 {
-    //@fixme: memory leak!!! The better way is to pass a pointer to the queue as an argument
-    Queue* queue = (Queue*)malloc(sizeof(Queue));
-    queue->handle = xQueueCreate(uxQueueLength, uxItemSize);
-    return *queue;
+    out->handle = xQueueCreate(uxQueueLength, uxItemSize);
 }
 
 void cleanQueue(const Queue* const queue)
