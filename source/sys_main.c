@@ -82,6 +82,7 @@
 #include <application/StringUtils.h>
 #include <application/ConstantsCommon.h>
 #include <application/WheelCommandStructs.h>
+#include <application/CommandParser.h>
 
 
 /* USER CODE END */
@@ -100,7 +101,6 @@
 
 // Mode = 0x10 for user and 0x1F for system mode
 extern void swiSwitchToMode ( uint32 mode );
-WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN]);
 void sendToExecuteCommand(WheelCommand);
 
 static Queue commandsQueue;
@@ -141,130 +141,23 @@ const WheelPinsStruct wheelPinsBR = { BR_WHEEL, (portCHAR)BACK_RIGHT_UP_PIN,
                                                 (portCHAR)BACK_RIGHT_DOWN_STATUS_PIN };
 
 
-/*
- * Tasks implementation
-*/
 
-void vCommandHandlerTask( void *pvParameters )
+inline void upWheel(WheelPinsStruct wheelPins)
 {
-    portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
-    for( ;; )
-    {
-        memset(receivedCommand, 0, MAX_COMMAND_LEN);
-
-        if (popFromQueue(&commandsQueue, receivedCommand))
-        {
-            printText("Received the command: ");
-            printText(receivedCommand);
-            printText("\r\n");
-
-            WheelCommand command = parseStringCommand(receivedCommand);
-            sendToExecuteCommand(command);
-        }
-        else
-        {
-            printText("Could not receive a value from the queue.\r\n");
-        }
-
-        DUMMY_BREAK;
-    }
-    deleteTask();
+    openPin(wheelPins.upPin);
+    closePin(wheelPins.downPin);
 }
 
-void parseParams(char* strCmd, WheelCommand* const retCommand )
+inline void downWheel(WheelPinsStruct wheelPins)
 {
-    char* str = strchr(strCmd, ' ');
-    while (str != NULL)
-    {
-        ++str;
-        if (isDigits(str, ' '))
-        {
-            portSHORT param = atoi(str);
-            retCommand->argv[retCommand->argc] = param;
-            retCommand->argc++;
-
-            str = strchr(str, ' ');
-        }
-        else
-        {
-            break;
-        }
-
-        if (retCommand->argc >= COMMAND_ARGS_LIMIT)
-        {
-            break;
-        }
-    }
+    closePin(wheelPins.upPin);
+    openPin(wheelPins.downPin);
 }
 
-WheelCommand parseStringCommand(portCHAR command[MAX_COMMAND_LEN])
+inline void stopWheel(WheelPinsStruct wheelPins)
 {
-    WheelCommand parsedCommand =
-    {
-         UNKNOWN_COMMAND,
-         {0},
-         0
-    };
-
-
-    if (0 == strncmp(command, "diag", 4))
-    {
-        parsedCommand.Command = CMD_DIAGNOSTIC;
-    }
-    else
-    if (0 == strncmp(command, "up", 2))
-    {
-        parsedCommand.Command = CMD_WHEEL_UP;
-    }
-    else
-    if (0 == strncmp(command, "down", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_DOWN;
-    }
-    else
-    if (0 == strncmp(command, "stop", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_STOP;
-    }
-    else
-    if (0 == strncmp(command, "auto", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_AUTO;
-    }
-    else
-    if (0 == strncmp(command, "lsave", 5))
-    {
-        parsedCommand.Command = CMD_LEVELS_SAVE;
-    }
-    else
-    if (0 == strncmp(command, "lget", 4))
-    {
-        parsedCommand.Command = CMD_LEVELS_GET;
-    }
-    else
-    if (0 == strncmp(command, "lshow", 5))
-    {
-        parsedCommand.Command = CMD_LEVELS_SHOW;
-    }
-    else
-    if (0 == strncmp(command, "bat", 3))
-    {
-        parsedCommand.Command = CMD_GET_BATTERY;
-    }
-    else
-    if (0 == strncmp(command, "compr", 5))
-    {
-        parsedCommand.Command = CMD_COMPRESSOR;
-    }
-    else
-    if (0 == strncmp(command, "ver", 3))
-    {
-        parsedCommand.Command = CMD_GET_VERSION;
-    }
-
-    parseParams(command, &parsedCommand);
-
-    return parsedCommand;
+    closePin(wheelPins.upPin);
+    closePin(wheelPins.downPin);
 }
 
 inline bool getBatteryVoltage(portLONG* const retVoltage)
@@ -283,7 +176,6 @@ inline bool getBatteryVoltage(portLONG* const retVoltage)
 
     return false;
 }
-
 
 inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLevel)
 {
@@ -304,6 +196,48 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
 
     return true;
 }
+
+
+inline void printLevels(const LevelValues* const levels)
+{
+    portSHORT i = 0;
+    for (; i < WHEELS_COUNT; ++i)
+    {
+        printNumber(levels->wheels[i]);
+        printText("\r\n");
+    }
+}
+
+/*
+ * Tasks implementation
+*/
+
+void vCommandHandlerTask( void *pvParameters )
+{
+    portCHAR receivedCommand[MAX_COMMAND_LEN] = {'\0'};
+    for( ;; )
+    {
+        memset(receivedCommand, 0, MAX_COMMAND_LEN);
+
+        if (popFromQueue(&commandsQueue, receivedCommand))
+        {
+            printText("Received the command: ");
+            printText(receivedCommand);
+            printText("\r\n");
+
+            WheelCommand command = parseCommand(receivedCommand);
+            sendToExecuteCommand(command);
+        }
+        else
+        {
+            printText("Could not receive a value from the queue.\r\n");
+        }
+
+        DUMMY_BREAK;
+    }
+    deleteTask();
+}
+
 
 void sendToExecuteCommand(WheelCommand cmd)
 {
@@ -414,16 +348,6 @@ void sendToExecuteCommand(WheelCommand cmd)
     }
 }
 
-inline void printLevels(const LevelValues* const levels)
-{
-    portSHORT i = 0;
-    for (; i < WHEELS_COUNT; ++i)
-    {
-        printNumber(levels->wheels[i]);
-        printText("\r\n");
-    }
-}
-
 void vMemTask( void *pvParameters )
 {
     swiSwitchToMode(0x1F);
@@ -431,6 +355,7 @@ void vMemTask( void *pvParameters )
     initializeFEE();
 
     // update cached levels to actual values
+    // TODO: clear cachedLevels to null values
     readLevels((void*)&cachedLevels);
     currentTargetLevels = NULL;
 
@@ -441,20 +366,21 @@ void vMemTask( void *pvParameters )
         if (!result)
         {
             printText("ERROR in memory task!!!");
+            continue;
         }
 
         if (cmd.Command == CMD_LEVELS_GET)
         {
-            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
-            levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
+            portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
+            levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
 
             printLevels(&(cachedLevels[levelNumber]));
         }
 
         if (cmd.Command == CMD_LEVELS_SAVE)
         {
-            portSHORT levelNumber = cmd.argc != 0 ? cmd.argv[0] : 0;
-            levelNumber = levelNumber >= LEVELS_COUNT ? 0 : levelNumber;
+            portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
+            levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
 
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
@@ -479,13 +405,6 @@ void vMemTask( void *pvParameters )
             {
                 printLevels(&currLevel);
             }
-
-            AdcValue_t average = 0;
-            readFromQueueWithTimeout(&adcAverageQueue, &average, 0);
-
-            printText("Average is ");
-            printNumber(average);
-            printText("\r\n");
         }
 
         if (cmd.Command == CMD_MEM_CLEAR)
@@ -520,25 +439,7 @@ void vCompressorTask( void *pvParameters )
     deleteTask();
 }
 
-inline void upWheel(WheelPinsStruct wheelPins)
-{
-    openPin(wheelPins.upPin);
-    closePin(wheelPins.downPin);
-}
-
-inline void downWheel(WheelPinsStruct wheelPins)
-{
-    closePin(wheelPins.upPin);
-    openPin(wheelPins.downPin);
-}
-
-inline void stopWheel(WheelPinsStruct wheelPins)
-{
-    closePin(wheelPins.upPin);
-    closePin(wheelPins.downPin);
-}
-
-void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
+inline void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
 {
     wheelStatus->isWorking = true;
     wheelStatus->startTime = xTaskGetTickCount();
@@ -561,7 +462,7 @@ void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
     }
 }
 
-void resetWheelStatus(WheelStatusStruct* status)
+inline void resetWheelStatus(WheelStatusStruct* status)
 {
     status->isWorking = false;
     status->levelLimitValue = 0;

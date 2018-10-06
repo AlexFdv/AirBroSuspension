@@ -10,6 +10,7 @@
 
 #include "ConstantsCommon.h"
 #include "ADCController.h"
+#include "FreeRTOS.h"
 
 typedef enum
 {
