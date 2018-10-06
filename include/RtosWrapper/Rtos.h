@@ -19,6 +19,7 @@
 
 typedef TimerCallbackFunction_t TimerCallbackFunction;
 
+TickType_t getTickCount();
 boolean createTask(TaskFunction_t task, const char * const pcTaskName, void * const pvParameters, unsigned long priority);
 void deleteTask();
 boolean createAndRunTimer(const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, TimerCallbackFunction_t pxCallbackFunction );

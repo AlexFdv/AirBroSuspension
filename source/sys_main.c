@@ -438,7 +438,7 @@ void vCompressorTask( void *pvParameters )
 inline void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
 {
     wheelStatus->isWorking = true;
-    wheelStatus->startTime = xTaskGetTickCount();
+    wheelStatus->startTime = getTickCount();
     wheelStatus->cmdType = cmd->Command;
     wheelStatus->timeoutSec = WHEEL_TIMER_SINGLE_TIMEOUT_SEC;
 
@@ -520,7 +520,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     /*
      * Check timer
      */
-    volatile portSHORT elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
+    volatile portSHORT elapsedTimeSec = (getTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
     wheelStatus->isWorking = (elapsedTimeSec < wheelStatus->timeoutSec);
 
     /*

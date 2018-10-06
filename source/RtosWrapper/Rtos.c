@@ -9,6 +9,11 @@
 #include "os_task.h"
 #include "os_timer.h"
 
+TickType_t getTickCount()
+{
+    return xTaskGetTickCount();
+}
+
 boolean createTask(TaskFunction_t task, const char * const pcTaskName, void * const pvParameters, unsigned long priority)
 {
     portBASE_TYPE taskResult = pdFAIL;
