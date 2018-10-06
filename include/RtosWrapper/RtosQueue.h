@@ -19,14 +19,14 @@ typedef struct
     xQueueHandle handle;
 } Queue;
 
-void createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize, Queue* out);
+void createQueue(const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, Queue* out);
 void cleanQueue(const Queue* const queue);
 void sendToQueueFromISR(const Queue* const queue, const void * const pvItemToQueue);
 void sendToQueueOverride(const Queue* const queue, const void * const pvItemToQueue);
-boolean sendToQueueWithTimeout(const Queue* const queue, void * const pvItemToQueue, TickType xTicksToWait);
+boolean sendToQueueWithTimeout(const Queue* const queue, void * const pvItemToQueue, TickType_t xTicksToWait);
 boolean popFromQueue(const Queue* const queue, void * const pvBuffer);
-boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait);
-boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait);
+boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait);
+boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait);
 
 
 #endif /* INCLUDE_RTOSWRAPPER_RTOSQUEUE_H_ */

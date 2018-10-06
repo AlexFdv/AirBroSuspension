@@ -72,9 +72,6 @@
 #include "RtosWrapper/RtosSemaphore.h"
 #include "RtosWrapper/RtosQueue.h"
 
-#include "FreeRTOS.h"
-#include "os_queue.h"
-
 #include <application/Diagnostic.h>
 #include <application/Settings.h>
 #include <application/Levels.h>
@@ -247,7 +244,6 @@ void sendToExecuteCommand(WheelCommand cmd)
         return;
     }
 
-
     if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
     {
 
@@ -294,7 +290,7 @@ void sendToExecuteCommand(WheelCommand cmd)
 
                 // translate to new command, where the first argument is a wheel number
                 WheelCommand newCmd;
-                portCHAR i = 0;
+                portSHORT i = 0;
                 for (; i< WHEELS_COUNT; ++i)
                 {
                     if (levels.wheels[i] == currentTargetLevels->wheels[i])
@@ -319,7 +315,7 @@ void sendToExecuteCommand(WheelCommand cmd)
         else if (cmd.argc == 0)
         {
             // for all wheels
-            portCHAR i = 0;
+            portSHORT i = 0;
             for (; i< WHEELS_COUNT; ++i)
             {
                 sendToQueueOverride(&wheelsCommandsQueues[i], (void*)&cmd); // always returns pdTRUE
@@ -481,7 +477,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * If not - continue cycle execution.
      */
 
-    static const TickType READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+    static const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
 
     if (wheelStatus->levelLimitValue > 0)
     {
@@ -524,7 +520,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     /*
      * Check timer
      */
-    volatile portCHAR elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
+    volatile portSHORT elapsedTimeSec = (xTaskGetTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
     wheelStatus->isWorking = (elapsedTimeSec < wheelStatus->timeoutSec);
 
     /*

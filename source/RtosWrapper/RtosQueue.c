@@ -10,7 +10,7 @@
 #include "os_task.h"
 #include <stdlib.h>
 
-void createQueue(const UBaseType uxQueueLength, const UBaseType uxItemSize, Queue* out)
+void createQueue(const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, Queue* out)
 {
     out->handle = xQueueCreate(uxQueueLength, uxItemSize);
 }
@@ -43,7 +43,7 @@ void sendToQueueOverride(const Queue* const queue, const void * const pvItemToQu
     xQueueOverwrite(queue->handle, pvItemToQueue);
 }
 
-boolean sendToQueueWithTimeout(const Queue * const queue, void * const pvItemToQueue, TickType xTicksToWait)
+boolean sendToQueueWithTimeout(const Queue * const queue, void * const pvItemToQueue, TickType_t xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueueSendToBack(queue->handle, pvItemToQueue, xTicksToWait);
 
@@ -57,13 +57,13 @@ boolean popFromQueue(const Queue* const queue, void * const pvBuffer)
     return (xStatus == pdTRUE);
 }
 
-boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
+boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueueReceive(queue->handle, pvBuffer, xTicksToWait);
     return (xStatus == pdTRUE);
 }
 
-boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType xTicksToWait)
+boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueuePeek(queue->handle, pvBuffer, xTicksToWait);
 

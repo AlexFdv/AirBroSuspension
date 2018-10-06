@@ -9,7 +9,7 @@
 #include "os_task.h"
 #include "os_timer.h"
 
-boolean createTask(TaskFunction task, const char * const pcTaskName, void * const pvParameters, unsigned long priority)
+boolean createTask(TaskFunction_t task, const char * const pcTaskName, void * const pvParameters, unsigned long priority)
 {
     portBASE_TYPE taskResult = pdFAIL;
 
@@ -30,7 +30,7 @@ void deleteTask()
     vTaskDelete( NULL );
 }
 
-boolean createAndRunTimer(const char * const pcTimerName, const TickType xTimerPeriodInTicks, TimerCallbackFunction pxCallbackFunction )
+boolean createAndRunTimer(const char * const pcTimerName, const TickType_t xTimerPeriodInTicks, TimerCallbackFunction pxCallbackFunction )
 {
     portBASE_TYPE taskResult = pdFAIL;
     xTimerHandle timerHandler = 0;
@@ -50,7 +50,7 @@ boolean createAndRunTimer(const char * const pcTimerName, const TickType xTimerP
     return true;
 }
 
-void delayTask(TickType ticks)
+void delayTask(TickType_t ticks)
 {
     vTaskDelay(ticks);
 }
