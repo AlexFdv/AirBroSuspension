@@ -6,6 +6,25 @@
  */
 
 #include "CommandParser.h"
+#include "string.h"
+#include "stdlib.h"
+#include "StringUtils.h"
+
+#define ARRSIZE(x) (sizeof(x) / sizeof((x)[0]))
+
+static const CommandInfo CommandsList[] =
+{   {CMD_DIAGNOSTIC, "diag"},
+    {CMD_WHEEL_UP,   "up"},
+    {CMD_WHEEL_DOWN, "down"},
+    {CMD_WHEEL_STOP, "stop"},
+    {CMD_WHEEL_AUTO, "auto"},
+    {CMD_LEVELS_SAVE, "lsave"},
+    {CMD_LEVELS_GET,  "lget"},
+    {CMD_LEVELS_SHOW, "lshow"},
+    {CMD_GET_BATTERY, "bat"},
+    {CMD_COMPRESSOR,  "compr"},
+    {CMD_GET_VERSION, "ver"}
+};
 
 
 WheelCommand parseCommand(portCHAR command[MAX_COMMAND_LEN])
@@ -17,63 +36,16 @@ WheelCommand parseCommand(portCHAR command[MAX_COMMAND_LEN])
          0
     };
 
-
-    if (0 == strncmp(command, "diag", 4))
+    portSHORT i = 0;
+    for (; i<ARRSIZE(CommandsList); ++i)
     {
-        parsedCommand.Command = CMD_DIAGNOSTIC;
+        if (0 == strcmp(command, CommandsList[i].cmdValue))
+        {
+            parsedCommand.Command = CommandsList[i].cmdType;
+            parseParams(command, &parsedCommand);
+            break;
+        }
     }
-    else
-    if (0 == strncmp(command, "up", 2))
-    {
-        parsedCommand.Command = CMD_WHEEL_UP;
-    }
-    else
-    if (0 == strncmp(command, "down", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_DOWN;
-    }
-    else
-    if (0 == strncmp(command, "stop", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_STOP;
-    }
-    else
-    if (0 == strncmp(command, "auto", 4))
-    {
-        parsedCommand.Command = CMD_WHEEL_AUTO;
-    }
-    else
-    if (0 == strncmp(command, "lsave", 5))
-    {
-        parsedCommand.Command = CMD_LEVELS_SAVE;
-    }
-    else
-    if (0 == strncmp(command, "lget", 4))
-    {
-        parsedCommand.Command = CMD_LEVELS_GET;
-    }
-    else
-    if (0 == strncmp(command, "lshow", 5))
-    {
-        parsedCommand.Command = CMD_LEVELS_SHOW;
-    }
-    else
-    if (0 == strncmp(command, "bat", 3))
-    {
-        parsedCommand.Command = CMD_GET_BATTERY;
-    }
-    else
-    if (0 == strncmp(command, "compr", 5))
-    {
-        parsedCommand.Command = CMD_COMPRESSOR;
-    }
-    else
-    if (0 == strncmp(command, "ver", 3))
-    {
-        parsedCommand.Command = CMD_GET_VERSION;
-    }
-
-    parseParams(command, &parsedCommand);
 
     return parsedCommand;
 }

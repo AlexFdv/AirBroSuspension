@@ -13,8 +13,6 @@
 #include "os_task.h"
 #include "os_timer.h"
 
-#include "Types.h"
-
 #define MS_TO_TICKS(x) ((x)/portTICK_RATE_MS)
 
 typedef TimerCallbackFunction_t TimerCallbackFunction;

@@ -8,11 +8,9 @@
 
 #include <application/ADCController.h>
 #include <application/ConstantsCommon.h>
-#include "adc.h"
 
 #include "FreeRTOS.h"
-#include "os_portable.h"
-
+#include "adc.h"
 
 static const _idx_value mapper[ADC_FIFO_SIZE] = {
      {FL_WHEEL_IDX, FL_WHEEL_ADC_PIN},

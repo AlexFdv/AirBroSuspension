@@ -76,7 +76,6 @@
 #include <application/Settings.h>
 #include <application/Levels.h>
 #include <application/HetConstants.h>
-#include <application/StringUtils.h>
 #include <application/ConstantsCommon.h>
 #include <application/WheelCommandStructs.h>
 #include <application/CommandParser.h>

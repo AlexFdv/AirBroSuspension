@@ -6,7 +6,6 @@
  */
 
 #include "RtosQueue.h"
-#include "Types.h"
 #include "os_task.h"
 #include <stdlib.h>
 

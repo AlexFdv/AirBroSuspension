@@ -9,7 +9,13 @@
 #define INCLUDE_APPLICATION_COMMANDPARSER_H_
 
 #include "WheelCommandStructs.h"
-#include "FreeRTOS.h"
+#include "os_portmacro.h"
+
+typedef struct
+{
+    COMMAND_TYPE cmdType;
+    portCHAR* cmdValue;
+} CommandInfo;
 
 WheelCommand parseCommand(portCHAR command[MAX_COMMAND_LEN]);
 void parseParams(char* strCmd, WheelCommand* const retCommand );
