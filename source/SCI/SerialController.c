@@ -89,42 +89,4 @@ void sciDisplayDataLin(const portCHAR *text, portSHORT length)
 }
 
 
-inline void printNumber(const portLONG number)
-{
-    char buff[10] = {'\0'};
-    ltoa(number, buff);
-    printText(buff);
-}
-
-inline void printNumberLin(const portLONG number)
-{
-    char buff[10] = {'\0'};
-    ltoa(number, buff);
-    printTextLin(buff);
-}
-
-//prints the text with terminated null char
-inline void printText(const char* text)
-{
-    printText_ex(text, strlen(text));
-
-    // duplicate to debug out
-    printTextLin_ex(text, strlen(text));
-}
-
-inline void printTextLin(const char* text)
-{
-    printTextLin_ex(text, strlen(text));
-}
-
-inline void printText_ex(const char* text, const short maxLen)
-{
-    sciDisplayData(text, maxLen);
-}
-
-inline void printTextLin_ex(const char* text, const short maxLen)
-{
-    sciDisplayDataLin(text, maxLen);
-}
-
 
