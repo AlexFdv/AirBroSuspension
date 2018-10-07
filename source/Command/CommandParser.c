@@ -53,7 +53,7 @@ WheelCommand parseCommand(portCHAR command[MAX_COMMAND_LEN])
 
 void parseParams(char* strCmd, WheelCommand* const retCommand )
 {
-    char* str = strchr(strCmd, ' ');
+    portCHAR* str = strchr(strCmd, ' ');
     while (str != NULL)
     {
         ++str;

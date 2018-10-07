@@ -10,24 +10,24 @@
 
 #include "os_portmacro.h"
 
-typedef void (*Callback)(uint8* data, short length);
+typedef void (*Callback)(uint8* data, portSHORT length);
 
 void initializeSci(Callback dataCallback);
 void sciDisplayData(const portCHAR *text, portSHORT length);
-void sciDisplayDataLin(const portCHAR *text, short length);
+void sciDisplayDataLin(const portCHAR *text, portSHORT length);
 void sciSendData(const uint8* data, portSHORT length);
 
-inline void printTextLin_ex(const char* text, const short maxLen)
+inline void printTextLin_ex(const portCHAR* text, const portSHORT maxLen)
 {
     sciDisplayDataLin(text, maxLen);
 }
 
-inline void printText_ex(const char* text, const short maxLen)
+inline void printText_ex(const portCHAR* text, const portSHORT maxLen)
 {
     sciDisplayData(text, maxLen);
 }
 
-inline void printText(const char* text)
+inline void printText(const portCHAR* text)
 {
     printText_ex(text, strlen(text));
 
@@ -36,7 +36,7 @@ inline void printText(const char* text)
 }
 
 
-inline void printTextLin(const char* text)
+inline void printTextLin(const portCHAR* text)
 {
     printTextLin_ex(text, strlen(text));
 }
