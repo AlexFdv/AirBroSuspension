@@ -486,6 +486,24 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
         if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT)
                 && readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
+#if 0
+            // New test logic without average calculations.
+            // !!! Deviation can be changed to smaller value (e.g. devide by 2). Need to test !!!
+            // Stop analyze at timeout (code below)
+            if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_DEVIATION))
+            {
+                upWheel(wheelStatus->wheelPins);
+            }
+            else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_DEVIATION))
+            {
+                downWheel(wheelStatus->wheelPins);
+            }
+            else
+            {
+                stopWheel(wheelStatus->wheelPins);
+            }
+        }
+#else
             if (average_delta < WHEELS_LEVELS_DEVIATION)
             {
                 stopWheel(wheelStatus->wheelPins);
@@ -508,6 +526,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
                     stopWheel(wheelStatus->wheelPins);
                 }
             }
+#endif
         }
         else
         {
