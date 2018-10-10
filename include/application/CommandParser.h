@@ -15,9 +15,10 @@ typedef struct
 {
     COMMAND_TYPE cmdType;
     portCHAR* cmdValue;
+    portSHORT cmdLen;
 } CommandInfo;
 
-WheelCommand parseCommand(portCHAR command[MAX_COMMAND_LEN]);
-void parseParams(char* strCmd, WheelCommand* const retCommand );
+WheelCommand parseCommand(const portCHAR command[MAX_COMMAND_LEN]);
+void parseParams(const char* const strCmd, WheelCommand* const retCommand );
 
 #endif /* INCLUDE_APPLICATION_COMMANDPARSER_H_ */

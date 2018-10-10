@@ -109,7 +109,8 @@ static Semaphore compressorSemaphore;
 static portSHORT compressorTimeoutSec;
 
 static LevelValues cachedLevels[LEVELS_COUNT];
-static LevelValues* currentTargetLevels;
+static Settings cachedSettings;
+static LevelValues* currentTargetLevels = NULL;
 static Diagnostic diagnostic;
 
 #define GLOBAL_SYNC_START suspendAllTasks()
@@ -350,9 +351,8 @@ void vMemTask( void *pvParameters )
     initializeFEE();
 
     // update cached levels to actual values
-    // TODO: clear cachedLevels to null values
     readLevels((void*)&cachedLevels);
-    currentTargetLevels = NULL;
+    readSettings((void*)&cachedSettings);
 
     WheelCommand cmd;
     for( ;; )
@@ -370,6 +370,7 @@ void vMemTask( void *pvParameters )
             levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
 
             printLevels(&(cachedLevels[levelNumber]));
+            continue;
         }
 
         if (cmd.Command == CMD_LEVELS_SAVE)
@@ -391,6 +392,7 @@ void vMemTask( void *pvParameters )
                 printNumber(levelNumber);
                 printText("\r\n");
             }
+            continue;
         }
 
         if (cmd.Command == CMD_LEVELS_SHOW)
@@ -400,6 +402,49 @@ void vMemTask( void *pvParameters )
             {
                 printLevels(&currLevel);
             }
+            continue;
+        }
+
+        if (cmd.Command == CMD_LEVELS_SAVE_MAX)
+        {
+            LevelValues currLevel;
+            if (getCurrentWheelsLevelsValues(&currLevel))
+            {
+                portSHORT i = 0;
+                for (;i<WHEELS_COUNT; ++i)
+                {
+                    cachedSettings.levels_values_max.wheels[i] = currLevel.wheels[i];
+                }
+                writeSettings(&cachedSettings);
+            }
+            continue;
+        }
+
+        if (cmd.Command == CMD_LEVELS_SAVE_MIN)
+        {
+            LevelValues currLevel;
+            if (getCurrentWheelsLevelsValues(&currLevel))
+            {
+                portSHORT i = 0;
+                for (; i < WHEELS_COUNT; ++i)
+                {
+                    cachedSettings.levels_values_min.wheels[i] = currLevel.wheels[i];
+                }
+                writeSettings(&cachedSettings);
+            }
+            continue;
+        }
+
+        if (cmd.Command == CMD_LEVELS_GET_MAX)
+        {
+            printLevels(&(cachedSettings.levels_values_max));
+            continue;
+        }
+
+        if (cmd.Command == CMD_LEVELS_GET_MIN)
+        {
+            printLevels(&(cachedSettings.levels_values_min));
+            continue;
         }
 
         if (cmd.Command == CMD_MEM_CLEAR)
