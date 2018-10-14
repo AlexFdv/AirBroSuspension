@@ -110,7 +110,7 @@ static portSHORT compressorTimeoutSec;
 
 static LevelValues cachedLevels[LEVELS_COUNT];
 static Settings cachedSettings;
-static LevelValues* currentTargetLevels = NULL;
+static LevelValues* pCurrentTargetLevels = NULL;
 static Diagnostic diagnostic;
 
 #define GLOBAL_SYNC_START suspendAllTasks()
@@ -282,20 +282,20 @@ void sendToExecuteCommand(WheelCommand cmd)
         // detect up or down based on current level values.
         if (cmd.Command == CMD_WHEEL_AUTO)
         {
-            LevelValues levels;
-            if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&levels))
+            LevelValues currentLevels;
+            if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&currentLevels))
             {
-                portSHORT savedLevelNumber = cmd.argv[0];
-                currentTargetLevels = cachedLevels + savedLevelNumber;
+                portSHORT savedLevelNumber = cmd.argv[0] > LEVELS_COUNT ? 0 : cmd.argv[0];
+                pCurrentTargetLevels = cachedLevels + savedLevelNumber;
 
                 // translate to new command, where the first argument is a wheel number
                 WheelCommand newCmd;
                 portSHORT i = 0;
                 for (; i< WHEELS_COUNT; ++i)
                 {
-                    if (levels.wheels[i] == currentTargetLevels->wheels[i])
+                    if (currentLevels.wheels[i] == pCurrentTargetLevels->wheels[i])
                         continue;
-                    newCmd.Command = (levels.wheels[i] < currentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
+                    newCmd.Command = (currentLevels.wheels[i] < pCurrentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
                     newCmd.argv[1] = savedLevelNumber;  // level number
                     newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value for auto mode. For single mode timeout is in execution task.
@@ -521,86 +521,88 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
      * If not - continue cycle execution.
      */
 
-    static const TickType_t READ_LEVEL_TIMEOUT = MS_TO_TICKS(500);   // max timeout to wait level value from the queue. 500 ms.
+    AdcValue_t levelValue = 0;
+    if (!readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, 0))
+    {
+        printText("ERROR!!! Timeout at level value reading from the queue!!!\r\n");
+        wheelStatus->isWorking = false;
+        return;
+    }
 
+    boolean allowWheelUp = levelValue < cachedSettings.levels_values_max.wheels[wheelStatus->wheelNumber];
+    boolean allowWheelDown = levelValue > cachedSettings.levels_values_min.wheels[wheelStatus->wheelNumber];
+
+    // auto mode checks
     if (wheelStatus->levelLimitValue > 0)
     {
-        AdcValue_t levelValue = 0;
+#ifndef SIMPLE_WHEEL_LOGIC
         AdcValue_t average_delta = 0;
-
-        if (readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, READ_LEVEL_TIMEOUT)
-                && readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
+        if (!readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
-#if 0
-            // New test logic without average calculations.
-            // !!! Deviation can be changed to smaller value (e.g. devide by 2). Need to test !!!
-            // Stop analyze at timeout (code below)
-            if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_DEVIATION))
-            {
-                upWheel(wheelStatus->wheelPins);
-            }
-            else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_DEVIATION))
-            {
-                downWheel(wheelStatus->wheelPins);
-            }
-            else
-            {
-                stopWheel(wheelStatus->wheelPins);
-            }
+            printText("ERROR!!! Timeout at average level value reading from the queue!!!\r\n");
+            wheelStatus->isWorking = false;
+            return;
         }
-#else
-            if (average_delta < WHEELS_LEVELS_DEVIATION)
-            {
-                stopWheel(wheelStatus->wheelPins);
-                /*
-                 * do not change wheelStatus->isWorking here to false. It will setup to false automatically at timeout.
-                 * */
-            }
-            else
-            {
-                if (levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_THRESHOLD))
-                {
-                    upWheel(wheelStatus->wheelPins);
-                }
-                else if (levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_THRESHOLD))
-                {
-                    downWheel(wheelStatus->wheelPins);
-                }
-                else
-                {
-                    stopWheel(wheelStatus->wheelPins);
-                }
-            }
-#endif
+
+        boolean shouldRun = (average_delta >= WHEELS_LEVELS_DEVIATION);
+        if (!shouldRun)
+        {
+            wheelStatus->isWorking = false;
         }
         else
+#endif
         {
-            /* If you see this message, then you have a problems... */
-            printText("ERROR!!! Timeout at level value reading from the queue!!!");
+            boolean shouldWheelUp = levelValue < (wheelStatus->levelLimitValue - WHEELS_LEVELS_THRESHOLD);
+            boolean shouldWheelDown = levelValue > (wheelStatus->levelLimitValue + WHEELS_LEVELS_THRESHOLD);
+
+            if (shouldWheelUp && allowWheelUp)
+            {
+                wheelStatus->cmdType = CMD_WHEEL_UP;
+            }
+            else if (shouldWheelDown && allowWheelDown)
+            {
+                wheelStatus->cmdType = CMD_WHEEL_DOWN;
+            }
+            else
+            {
+                wheelStatus->cmdType = CMD_WHEEL_STOP;
+            }
         }
+    } // auto mode if (wheelStatus->levelLimitValue > 0)'
+    // manual mode checks
+    else
+    {
+        if (wheelStatus->cmdType == CMD_WHEEL_UP && !allowWheelUp)
+            wheelStatus->cmdType = CMD_WHEEL_STOP;
+
+        if (wheelStatus->cmdType == CMD_WHEEL_DOWN && !allowWheelDown)
+            wheelStatus->cmdType = CMD_WHEEL_STOP;
     }
 
     /*
      * Check timer
      */
-    volatile portSHORT elapsedTimeSec = (getTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
-    wheelStatus->isWorking = (elapsedTimeSec < wheelStatus->timeoutSec);
+    if (wheelStatus->isWorking)
+    {
+        volatile portSHORT elapsedTimeSec = (getTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
+        wheelStatus->isWorking = elapsedTimeSec < wheelStatus->timeoutSec;
+    }
 
     /*
      * Check status pin
      * */
-    if ((wheelStatus->cmdType == CMD_WHEEL_UP && getPin(wheelStatus->wheelPins.upPinStatus) != 1)
+    /*if ((wheelStatus->cmdType == CMD_WHEEL_UP && getPin(wheelStatus->wheelPins.upPinStatus) != 1)
         || (wheelStatus->cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus->wheelPins.downPinStatus) != 1))
     {
         wheelStatus->isWorking = false;
 
-        /*
-         * Array from 0 to 7, from "front left up" to "back right down" wheel.
-         * */
+
+         // Array from 0 to 7, from "front left up" to "back right down" wheel.
+
         diagnostic.wheels_stats[wheelStatus->wheelNumber * 2] = getPin(wheelStatus->wheelPins.upPinStatus);
         diagnostic.wheels_stats[wheelStatus->wheelNumber * 2 + 1] = getPin(wheelStatus->wheelPins.downPinStatus);
-    }
-}
+    }*/
+}  // executeWheelLogic
 
 void vWheelTask( void *pvParameters )
 {
@@ -635,29 +637,28 @@ void vWheelTask( void *pvParameters )
         {
             initializeWheelStatus(&wheelStatus, &cmd);
 
-            switch (wheelStatus.cmdType) {
-                case CMD_WHEEL_UP:
-                    upWheel(wheelStatus.wheelPins);
-                    break;  //switch
-                case CMD_WHEEL_DOWN:
-                    downWheel(wheelStatus.wheelPins);
-                    break;  //switch
-                case CMD_WHEEL_STOP:
-                    stopWheel(wheelStatus.wheelPins);
-                    resetWheelStatus(&wheelStatus);
-                    continue;   //loop
-                default:
-                    // do nothing and goto cycle start
-                    printText("Unknown command received");
-                    continue; //loop
+            if (cmd.Command == UNKNOWN_COMMAND)
+            {
+                printText("Unknown command received");
+                continue; //loop
             }
         }
 
         logicFunctionPointer(&wheelStatus);
 
-        /*
-         * Do we need to stop working, or continue.
-         * */
+        switch (wheelStatus.cmdType)
+        {
+        case CMD_WHEEL_UP:
+            upWheel(wheelStatus.wheelPins);
+            break;
+        case CMD_WHEEL_DOWN:
+            downWheel(wheelStatus.wheelPins);
+            break;  //switch
+        case CMD_WHEEL_STOP:
+            stopWheel(wheelStatus.wheelPins);
+            break;
+        }
+
         if (!wheelStatus.isWorking)
         {
             stopWheel(wheelStatus.wheelPins);
@@ -693,19 +694,22 @@ void vADCUpdaterTask( void *pvParameters )
          * First 4 is values for wheels.
          * */
 
-        if (currentTargetLevels == NULL)
+#ifndef SIMPLE_WHEEL_LOGIC
+
+        if (pCurrentTargetLevels == NULL)
             continue;
 
         uint32_t average_delta = 0;
         for (portSHORT i = 0; i < WHEELS_COUNT; ++i)
         {
-            int32_t diff = (adc_data.values[i] - currentTargetLevels->wheels[i]);
+            int32_t diff = (adc_data.values[i] - pCurrentTargetLevels->wheels[i]);
             average_delta += abs(diff);
         }
         average_delta /= WHEELS_COUNT;
 
         AdcValue_t result_value = (AdcValue_t)average_delta;
         sendToQueueOverride(&adcAverageQueue, &result_value);
+#endif
 
         DUMMY_BREAK;
     }
