@@ -16,7 +16,7 @@
 // max command size is MAX_COMMAND_LEN = 10 for now.
 //
 static const CommandInfo CommandsList[] =
-{   {CMD_DIAGNOSTIC, "diag", 4},
+{   //{CMD_DIAGNOSTIC, "diag", 4},
     {CMD_WHEEL_UP,   "up", 2},
     {CMD_WHEEL_DOWN, "down", 4},
     {CMD_WHEEL_STOP, "stop", 4},

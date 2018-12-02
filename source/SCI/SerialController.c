@@ -67,13 +67,13 @@ static void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT 
     };
 }
 
-void sciSendData(const uint8* data, portSHORT length)
+void sciSendDataLin(const uint8* data, portSHORT length)
 {
     while (length--)
     {
         while ((sciREG->FLR & 0x4) == 4)
             ; /* wait until busy */
-        sciSendByte(sciREG, *(data++)); /* send out text */
+        sciSendByte(SCILIN_REG, *(data++)); /* send out text */
     };
 }
 

@@ -62,6 +62,13 @@ boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer,
     return (xStatus == pdTRUE);
 }
 
+boolean readFromQueue(const Queue* const queue, void * const pvBuffer)
+{
+    portBASE_TYPE xStatus = xQueuePeek(queue->handle, pvBuffer, portMAX_DELAY);
+
+    return (xStatus == pdTRUE);
+}
+
 boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait)
 {
     portBASE_TYPE xStatus = xQueuePeek(queue->handle, pvBuffer, xTicksToWait);

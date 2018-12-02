@@ -15,7 +15,7 @@ typedef void (*Callback)(uint8* data, portSHORT length);
 void initializeSci(Callback dataCallback);
 void sciDisplayData(const portCHAR *text, portSHORT length);
 void sciDisplayDataLin(const portCHAR *text, portSHORT length);
-void sciSendData(const uint8* data, portSHORT length);
+void sciSendDataLin(const uint8* data, portSHORT length);
 
 inline void printText(const portCHAR* text)
 {

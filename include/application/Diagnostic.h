@@ -9,10 +9,12 @@
 #define INCLUDE_APPLICATION_DIAGNOSTIC_H_
 
 #include "ConstantsCommon.h"
+#include "ADCController.h"
 
 typedef struct
 {
     bool wheels_stats[WHEELS_COUNT * 2];
+    AdcDataValues adc_values;
 
 } Diagnostic;
 

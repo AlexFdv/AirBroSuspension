@@ -63,6 +63,7 @@
 #include "sci.h"
 #include "adc.h"
 
+#include <application/Diagnostic.h>
 #include <application/ADCController.h>
 #include <application/FEEController.h>
 #include <application/HetPinsController.h>
@@ -72,7 +73,7 @@
 #include "RtosWrapper/RtosSemaphore.h"
 #include "RtosWrapper/RtosQueue.h"
 
-#include <application/Diagnostic.h>
+
 #include <application/Settings.h>
 #include <application/Levels.h>
 #include <application/HetConstants.h>
@@ -249,10 +250,10 @@ void sendToExecuteCommand(WheelCommand cmd)
     if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
     {
 
-        if (cmd.Command == CMD_DIAGNOSTIC)
+        /*if (cmd.Command == CMD_DIAGNOSTIC)
         {
             sciSendData((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
-        }
+        }*/
 
         if (cmd.Command == CMD_GET_VERSION)
         {
@@ -687,7 +688,7 @@ void vADCUpdaterTask( void *pvParameters )
     {
         getADCDataValues(&adc_data);
 
-        for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
+        for (portSHORT i = 0; i < ADC_FIFO_SIZE; ++i)
         {
             sendToQueueOverride(&adcValuesQueues[i], &(adc_data.values[i]));
         }
@@ -724,6 +725,15 @@ void vTelemetryTask( void *pvParameters )
 {
     for(;;)
     {
+
+        for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
+        {
+            readFromQueue(&adcValuesQueues[i], &(diagnostic.adc_values.values[i]));
+        }
+
+        sciSendDataLin((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
+
+        delayTask(MS_TO_TICKS(1000));
 
         DUMMY_BREAK;
     }
@@ -818,7 +828,11 @@ int main(void)
     if (!taskResult)
         goto ERROR;
 
-    // temporary timer
+    taskResult &= createTask(vTelemetryTask, "TelemetryTask", NULL, TASK_DEFAULT_PRIORITY);
+    if (!taskResult)
+        goto ERROR;
+
+    // temporary timer with priority 2
     taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
     if (!taskResult)
         goto ERROR;

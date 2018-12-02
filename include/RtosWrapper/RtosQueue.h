@@ -26,6 +26,7 @@ void sendToQueueOverride(const Queue* const queue, const void * const pvItemToQu
 boolean sendToQueueWithTimeout(const Queue* const queue, void * const pvItemToQueue, TickType_t xTicksToWait);
 boolean popFromQueue(const Queue* const queue, void * const pvBuffer);
 boolean popFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait);
+boolean readFromQueue(const Queue* const queue, void * const pvBuffer);
 boolean readFromQueueWithTimeout(const Queue* const queue, void * const pvBuffer, TickType_t xTicksToWait);
 
 
