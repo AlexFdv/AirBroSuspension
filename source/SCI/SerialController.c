@@ -56,7 +56,7 @@ void sciNotification(sciBASE_t *sci, uint32 flags)
     sciReceive(sci, 1, &receivedByte);
 }
 
-void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
+static void sciDisplayDataEx(sciBASE_t *sciReg, const portCHAR *text, portSHORT length)
 {
     while (length--)
     {

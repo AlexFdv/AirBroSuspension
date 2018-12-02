@@ -116,6 +116,8 @@ static Diagnostic diagnostic;
 #define GLOBAL_SYNC_START suspendAllTasks()
 #define GLOBAL_SYNC_END resumeAllTasks()
 
+#define SIMPLE_WHEEL_LOGIC
+
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
                                                 (portCHAR)FORWARD_LEFT_DOWN_PIN,
@@ -268,7 +270,7 @@ void sendToExecuteCommand(WheelCommand cmd)
 
         if (cmd.Command == CMD_COMPRESSOR)
         {
-            compressorTimeoutSec = 5;   // default value for compressor 3 seconds
+            compressorTimeoutSec = 5;   // default value for compressor 5 seconds
             if (cmd.argc > 0)
             {
                 compressorTimeoutSec = cmd.argv[0];
@@ -301,6 +303,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                     newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value for auto mode. For single mode timeout is in execution task.
 
                     // check the timeout param (in seconds)
+                    // and override second argument if it is needed
                     if (cmd.argc > 1)
                     {
                         newCmd.argv[2] = cmd.argv[1];
@@ -689,12 +692,12 @@ void vADCUpdaterTask( void *pvParameters )
             sendToQueueOverride(&adcValuesQueues[i], &(adc_data.values[i]));
         }
 
+#ifndef SIMPLE_WHEEL_LOGIC
+
         /*
          * Calculate average deviation value of levels
          * First 4 is values for wheels.
          * */
-
-#ifndef SIMPLE_WHEEL_LOGIC
 
         if (pCurrentTargetLevels == NULL)
             continue;
@@ -710,6 +713,17 @@ void vADCUpdaterTask( void *pvParameters )
         AdcValue_t result_value = (AdcValue_t)average_delta;
         sendToQueueOverride(&adcAverageQueue, &result_value);
 #endif
+
+        DUMMY_BREAK;
+    }
+
+    deleteTask();
+}
+
+void vTelemetryTask( void *pvParameters )
+{
+    for(;;)
+    {
 
         DUMMY_BREAK;
     }
@@ -801,6 +815,8 @@ int main(void)
      * Compressor task
      */
     taskResult &= createTask(vCompressorTask, "CompressorTask", NULL, TASK_DEFAULT_PRIORITY);
+    if (!taskResult)
+        goto ERROR;
 
     // temporary timer
     taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);

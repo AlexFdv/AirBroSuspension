@@ -21,11 +21,11 @@ static const CommandInfo CommandsList[] =
     {CMD_WHEEL_DOWN, "down", 4},
     {CMD_WHEEL_STOP, "stop", 4},
     {CMD_WHEEL_AUTO, "auto", 4},
-    {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},   // put it before lsave
-    {CMD_LEVELS_SAVE_MIN, "lminsave", 8},   // put it before lsave
+    {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},
+    {CMD_LEVELS_SAVE_MIN, "lminsave", 8},
     {CMD_LEVELS_SAVE, "lsave", 5},
-    {CMD_LEVELS_GET_MAX, "lmaxget", 7},        // put it before lget
-    {CMD_LEVELS_GET_MIN, "lminget", 7},        // put it before lget
+    {CMD_LEVELS_GET_MAX, "lmaxget", 7},
+    {CMD_LEVELS_GET_MIN, "lminget", 7},
     {CMD_LEVELS_GET,  "lget", 4},
     {CMD_LEVELS_SHOW, "lshow", 5},
     {CMD_MEM_CLEAR, "memclear", 8},
