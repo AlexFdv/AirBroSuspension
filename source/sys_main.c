@@ -94,6 +94,11 @@
 
 /* USER CODE BEGIN (2) */
 
+// ----------------------------- USE SIMPLE LOGIC BY DEFAULT NOW -----------------------------
+#define SIMPLE_WHEEL_LOGIC
+// -------------------------------------------------------------------------------------------
+
+
 #pragma SWI_ALIAS(swiSwitchToMode, 1)
 
 // Mode = 0x10 for user and 0x1F for system mode
@@ -104,7 +109,10 @@ static Queue commandsQueue;
 static Queue memoryCommandsQueue;
 static Queue wheelsCommandsQueues[WHEELS_COUNT];
 static Queue adcValuesQueues[ADC_FIFO_SIZE];    // adc values have specific order, see ADCController.h(.c)
+
+#ifndef SIMPLE_WHEEL_LOGIC
 static Queue adcAverageQueue;
+#endif
 
 static Semaphore compressorSemaphore;
 static portSHORT compressorTimeoutSec;
@@ -117,9 +125,6 @@ static Diagnostic diagnostic;
 #define GLOBAL_SYNC_START suspendAllTasks()
 #define GLOBAL_SYNC_END resumeAllTasks()
 
-// ----------------------------- USE SIMPLE LOGIC BY DEFAULT NOW -----------------------------
-#define SIMPLE_WHEEL_LOGIC
-// -------------------------------------------------------------------------------------------
 
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
@@ -199,6 +204,17 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     return true;
 }
 
+inline bool getCurrentCompressorPressure(AdcValue_t* const retLevel)
+{
+    if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], retLevel, 0))
+    {
+        printText("ERROR!!! Timeout at compressor value reading from the queue!!!\r\n");
+
+        return false;
+    }
+    return true;
+}
+
 
 inline void printLevels(const LevelValues* const levels)
 {
@@ -241,6 +257,7 @@ void vCommandHandlerTask( void *pvParameters )
 }
 
 
+
 void sendToExecuteCommand(Command cmd)
 {
     if (cmd.commandType == UNKNOWN_COMMAND)
@@ -271,26 +288,32 @@ void sendToExecuteCommand(Command cmd)
                 printText("ERROR getting battery value.");
         }
 
-        if (cmd.commandType == CMD_COMPRESSOR)
+        /*if (cmd.commandType == CMD_COMPRESSOR)
         {
             if (cmd.argc > 0)
             {
                 compressorTimeoutSec = cmd.argv[0];
             }
             //giveSemaphore(&compressorSemaphore);
-        }
+        }*/
 
         // TODO: remove after moving pressure value to the diagnostic
         if (cmd.commandType == CMD_GET_COMPRESSOR_PRESSURE)
         {
-            AdcValue_t levelValue = 0;
-            if (readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
+            AdcValue_t level;
+            if (getCurrentCompressorPressure(&level))
             {
-                printNumber(levelValue);
+                printNumber(level);
             }
-            else
+        }
+
+        // TODO: remove after moving pressure value to the diagnostic
+        if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE ||
+                cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
+        {
+            if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
             {
-                printText("ERROR!!! Timeout at compressor value reading from the queue!!!\r\n");
+                printText("Could not add memory command to the queue (it is full).\r\n");
             }
         }
     }
@@ -402,9 +425,8 @@ void vMemTask( void *pvParameters )
             {
                 GLOBAL_SYNC_START;
                     cachedLevels[levelNumber] = currLevel;
+                    writeLevels((void*)&cachedLevels);
                 GLOBAL_SYNC_END;
-
-                writeLevels((void*)&cachedLevels);
 
                 printLevels(&currLevel);
                 printText("levels saved to ");
@@ -429,12 +451,14 @@ void vMemTask( void *pvParameters )
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
             {
-                portSHORT i = 0;
-                for (;i<WHEELS_COUNT; ++i)
-                {
-                    cachedSettings.levels_values_max.wheels[i] = currLevel.wheels[i];
-                }
-                writeSettings(&cachedSettings);
+                GLOBAL_SYNC_START;
+                    portSHORT i = 0;
+                    for (;i<WHEELS_COUNT; ++i)
+                    {
+                        cachedSettings.levels_values_max.wheels[i] = currLevel.wheels[i];
+                    }
+                    writeSettings(&cachedSettings);
+                GLOBAL_SYNC_END;
             }
             continue;
         }
@@ -444,12 +468,40 @@ void vMemTask( void *pvParameters )
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
             {
-                portSHORT i = 0;
-                for (; i < WHEELS_COUNT; ++i)
-                {
-                    cachedSettings.levels_values_min.wheels[i] = currLevel.wheels[i];
-                }
-                writeSettings(&cachedSettings);
+                GLOBAL_SYNC_START;
+                    portSHORT i = 0;
+                    for (; i < WHEELS_COUNT; ++i)
+                    {
+                        cachedSettings.levels_values_min.wheels[i] = currLevel.wheels[i];
+                    }
+                    writeSettings(&cachedSettings);
+                GLOBAL_SYNC_END;
+            }
+            continue;
+        }
+
+        if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE)
+        {
+            AdcValue_t level;
+            if (getCurrentCompressorPressure(&level))
+            {
+                GLOBAL_SYNC_START;
+                    cachedSettings.compressor_preasure_min = level;
+                    writeSettings(&cachedSettings);
+                GLOBAL_SYNC_END;
+            }
+            continue;
+        }
+
+        if (cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
+        {
+            AdcValue_t level;
+            if (getCurrentCompressorPressure(&level))
+            {
+                GLOBAL_SYNC_START;
+                    cachedSettings.compressor_preasure_max = level;
+                    writeSettings(&cachedSettings);
+                GLOBAL_SYNC_END;
             }
             continue;
         }
