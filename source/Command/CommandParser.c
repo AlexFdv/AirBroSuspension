@@ -38,9 +38,9 @@ static const CommandInfo CommandsList[] =
 };
 
 
-WheelCommand parseCommand(const portCHAR command[MAX_COMMAND_LEN])
+Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 {
-    WheelCommand parsedCommand =
+    Command parsedCommand =
     {
          UNKNOWN_COMMAND,
          {0},
@@ -52,7 +52,7 @@ WheelCommand parseCommand(const portCHAR command[MAX_COMMAND_LEN])
     {
         if (0 == strncmp(command, CommandsList[i].cmdValue, CommandsList[i].cmdLen))
         {
-            parsedCommand.Command = CommandsList[i].cmdType;
+            parsedCommand.commandType = CommandsList[i].cmdType;
             parseParams(command, &parsedCommand);
             break;
         }
@@ -62,7 +62,7 @@ WheelCommand parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 }
 
 
-void parseParams(const char* const strCmd, WheelCommand* const retCommand )
+void parseParams(const char* const strCmd, Command* const retCommand )
 {
     portCHAR* str = strchr(strCmd, ' ');
     while (str != NULL)

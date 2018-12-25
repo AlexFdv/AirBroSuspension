@@ -98,7 +98,7 @@
 
 // Mode = 0x10 for user and 0x1F for system mode
 extern void swiSwitchToMode ( uint32 mode );
-void sendToExecuteCommand(WheelCommand);
+void sendToExecuteCommand(Command);
 
 static Queue commandsQueue;
 static Queue memoryCommandsQueue;
@@ -227,7 +227,7 @@ void vCommandHandlerTask( void *pvParameters )
             printText(receivedCommand);
             printText("\r\n");
 
-            WheelCommand command = parseCommand(receivedCommand);
+            Command command = parseCommand(receivedCommand);
             sendToExecuteCommand(command);
         }
         else
@@ -241,15 +241,15 @@ void vCommandHandlerTask( void *pvParameters )
 }
 
 
-void sendToExecuteCommand(WheelCommand cmd)
+void sendToExecuteCommand(Command cmd)
 {
-    if (cmd.Command == UNKNOWN_COMMAND)
+    if (cmd.commandType == UNKNOWN_COMMAND)
     {
         printText("Unknown command received\r\n");
         return;
     }
 
-    if ((cmd.Command & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
+    if ((cmd.commandType & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
     {
 
         /*if (cmd.Command == CMD_DIAGNOSTIC)
@@ -257,12 +257,12 @@ void sendToExecuteCommand(WheelCommand cmd)
             sciSendData((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
         }*/
 
-        if (cmd.Command == CMD_GET_VERSION)
+        if (cmd.commandType == CMD_GET_VERSION)
         {
             printText(VERSION);
         }
 
-        if (cmd.Command == CMD_GET_BATTERY)
+        if (cmd.commandType == CMD_GET_BATTERY)
         {
             portLONG batteryVoltage = 0;
             if (getBatteryVoltage(&batteryVoltage))
@@ -271,7 +271,7 @@ void sendToExecuteCommand(WheelCommand cmd)
                 printText("ERROR getting battery value.");
         }
 
-        if (cmd.Command == CMD_COMPRESSOR)
+        if (cmd.commandType == CMD_COMPRESSOR)
         {
             if (cmd.argc > 0)
             {
@@ -281,7 +281,7 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
 
         // TODO: remove after moving pressure value to the diagnostic
-        if (cmd.Command == CMD_GET_COMPRESSOR_PRESSURE)
+        if (cmd.commandType == CMD_GET_COMPRESSOR_PRESSURE)
         {
             AdcValue_t levelValue = 0;
             if (readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
@@ -295,10 +295,10 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if ((cmd.Command & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
+    if ((cmd.commandType & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
         // detect up or down based on current level values.
-        if (cmd.Command == CMD_WHEEL_AUTO)
+        if (cmd.commandType == CMD_WHEEL_AUTO)
         {
             LevelValues currentLevels;
             if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&currentLevels))
@@ -307,13 +307,13 @@ void sendToExecuteCommand(WheelCommand cmd)
                 pCurrentTargetLevels = cachedLevels + savedLevelNumber;
 
                 // translate to new command, where the first argument is a wheel number
-                WheelCommand newCmd;
+                Command newCmd;
                 portSHORT i = 0;
                 for (; i< WHEELS_COUNT; ++i)
                 {
                     if (currentLevels.wheels[i] == pCurrentTargetLevels->wheels[i])
                         continue;
-                    newCmd.Command = (currentLevels.wheels[i] < pCurrentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
+                    newCmd.commandType = (currentLevels.wheels[i] < pCurrentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
                     newCmd.argv[1] = savedLevelNumber;  // level number
                     newCmd.argv[2] = WHEEL_TIMER_TIMEOUT_SEC;   // default value for auto mode. For single mode timeout is in execution task.
@@ -351,8 +351,8 @@ void sendToExecuteCommand(WheelCommand cmd)
         }
     }
 
-    if ((cmd.Command & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE
-            || (cmd.Command & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE)
+    if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE
+            || (cmd.commandType & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
         // if arguments is empty, then default cell number is 0 (see vMemTask for details).
@@ -373,7 +373,7 @@ void vMemTask( void *pvParameters )
     readLevels((void*)&cachedLevels);
     readSettings((void*)&cachedSettings);
 
-    WheelCommand cmd;
+    Command cmd;
     for( ;; )
     {
         boolean result = popFromQueue(&memoryCommandsQueue,  &cmd);
@@ -383,7 +383,7 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_GET)
+        if (cmd.commandType == CMD_LEVELS_GET)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
@@ -392,7 +392,7 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_SAVE)
+        if (cmd.commandType == CMD_LEVELS_SAVE)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
@@ -414,7 +414,7 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_SHOW)
+        if (cmd.commandType == CMD_LEVELS_SHOW)
         {
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
@@ -424,7 +424,7 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_SAVE_MAX)
+        if (cmd.commandType == CMD_LEVELS_SAVE_MAX)
         {
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
@@ -439,7 +439,7 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_SAVE_MIN)
+        if (cmd.commandType == CMD_LEVELS_SAVE_MIN)
         {
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
@@ -454,19 +454,19 @@ void vMemTask( void *pvParameters )
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_GET_MAX)
+        if (cmd.commandType == CMD_LEVELS_GET_MAX)
         {
             printLevels(&(cachedSettings.levels_values_max));
             continue;
         }
 
-        if (cmd.Command == CMD_LEVELS_GET_MIN)
+        if (cmd.commandType == CMD_LEVELS_GET_MIN)
         {
             printLevels(&(cachedSettings.levels_values_min));
             continue;
         }
 
-        if (cmd.Command == CMD_MEM_CLEAR)
+        if (cmd.commandType == CMD_MEM_CLEAR)
         {
             formatFEE();
         }
@@ -517,11 +517,11 @@ void vCompressorTask( void *pvParameters )
     deleteTask();
 }
 
-inline void initializeWheelStatus(WheelStatusStruct* wheelStatus, WheelCommand* cmd)
+inline void initializeWheelStatus(WheelStatusStruct* wheelStatus, Command* cmd)
 {
     wheelStatus->isWorking = true;
     wheelStatus->startTime = getTickCount();
-    wheelStatus->cmdType = cmd->Command;
+    wheelStatus->cmdType = cmd->commandType;
     wheelStatus->timeoutSec = WHEEL_TIMER_SINGLE_TIMEOUT_SEC;
 
     // check if there is a level limit value. If not, just up or down a wheel.
@@ -660,7 +660,7 @@ void vWheelTask( void *pvParameters )
        .cmdType = UNKNOWN_COMMAND,
     };
 
-    WheelCommand cmd;
+    Command cmd;
     for( ;; )
     {
         /*
@@ -675,7 +675,7 @@ void vWheelTask( void *pvParameters )
         {
             initializeWheelStatus(&wheelStatus, &cmd);
 
-            if (cmd.Command == UNKNOWN_COMMAND)
+            if (cmd.commandType == UNKNOWN_COMMAND)
             {
                 printText("Unknown command received");
                 continue; //loop
@@ -804,7 +804,7 @@ int main(void)
     portSHORT i = 0;
     for (; i< WHEELS_COUNT; ++i)
     {
-        createQueue(1, sizeof(WheelCommand), wheelsCommandsQueues + i);  // the only command for each wheel
+        createQueue(1, sizeof(Command), wheelsCommandsQueues + i);  // the only command for each wheel
     }
 
     for (i = 0; i< ADC_FIFO_SIZE; ++i)
@@ -812,7 +812,7 @@ int main(void)
         createQueue(1, sizeof(AdcValue_t), adcValuesQueues + i);  // the only value for each wheel
     }
 
-    createQueue(3, sizeof(WheelCommand), &memoryCommandsQueue);
+    createQueue(3, sizeof(Command), &memoryCommandsQueue);
 #ifndef SIMPLE_WHEEL_LOGIC
     createQueue(1, sizeof(AdcValue_t), &adcAverageQueue);
 #endif

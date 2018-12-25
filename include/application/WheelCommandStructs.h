@@ -48,10 +48,10 @@ typedef enum
 
 typedef struct
 {
-    COMMAND_TYPE Command;                  // command type, such as wheel command (up, down, stop), memory command (save, get, etc).
+    COMMAND_TYPE commandType;                  // command type, such as wheel command (up, down, stop), memory command (save, get, etc).
     portSHORT argv[COMMAND_ARGS_LIMIT];
     portCHAR argc;
-} WheelCommand;
+} Command;
 
 typedef struct
 {
