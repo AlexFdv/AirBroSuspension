@@ -117,7 +117,9 @@ static Diagnostic diagnostic;
 #define GLOBAL_SYNC_START suspendAllTasks()
 #define GLOBAL_SYNC_END resumeAllTasks()
 
+// ----------------------------- USE SIMPLE LOGIC BY DEFAULT NOW -----------------------------
 #define SIMPLE_WHEEL_LOGIC
+// -------------------------------------------------------------------------------------------
 
 // assosiations with pins
 const WheelPinsStruct wheelPinsFL = { FL_WHEEL, (portCHAR)FORWARD_LEFT_UP_PIN,
@@ -271,12 +273,25 @@ void sendToExecuteCommand(WheelCommand cmd)
 
         if (cmd.Command == CMD_COMPRESSOR)
         {
-            compressorTimeoutSec = 5;   // default value for compressor 5 seconds
             if (cmd.argc > 0)
             {
                 compressorTimeoutSec = cmd.argv[0];
             }
-            giveSemaphore(&compressorSemaphore);
+            //giveSemaphore(&compressorSemaphore);
+        }
+
+        // TODO: remove after moving pressure value to the diagnostic
+        if (cmd.Command == CMD_GET_COMPRESSOR_PRESSURE)
+        {
+            AdcValue_t levelValue = 0;
+            if (readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
+            {
+                printNumber(levelValue);
+            }
+            else
+            {
+                printText("ERROR!!! Timeout at compressor value reading from the queue!!!\r\n");
+            }
         }
     }
 
@@ -464,18 +479,37 @@ void vMemTask( void *pvParameters )
 
 void vCompressorTask( void *pvParameters )
 {
+    // default value 2 seconds
+    compressorTimeoutSec = 3;
+    bool isWorking = false;
+    AdcValue_t levelValue = 0;
+
     for(;;)
     {
-        takeSemaphore(&compressorSemaphore);
+        //takeSemaphore(&compressorSemaphore);
 
-        printText("Compressor on");
-        openPin(COMPRESSOR_HET_PIN);
+        // time delay before each check if compressor is not working.
+        if (!isWorking)
+            delayTask(MS_TO_TICKS(compressorTimeoutSec * 1000));
 
-        // temp delay for tests
-        delayTask(MS_TO_TICKS(compressorTimeoutSec * 1000));
+        if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
+        {
+            printText("ERROR!!! Timeout at compressor value reading from the queue!!!\r\n");
+            continue;
+        }
 
-        printText("Compressor off");
-        closePin(COMPRESSOR_HET_PIN);
+        if (!isWorking && levelValue < cachedSettings.compressor_preasure_min)
+        {
+            isWorking = true;
+            printText("Compressor on");
+            openPin(COMPRESSOR_HET_PIN);
+        }
+        else if (isWorking && levelValue > cachedSettings.compressor_preasure_max)
+        {
+            isWorking = false;
+            printText("Compressor off");
+            closePin(COMPRESSOR_HET_PIN);
+        }
 
         DUMMY_BREAK;
     }
@@ -779,7 +813,9 @@ int main(void)
     }
 
     createQueue(3, sizeof(WheelCommand), &memoryCommandsQueue);
+#ifndef SIMPLE_WHEEL_LOGIC
     createQueue(1, sizeof(AdcValue_t), &adcAverageQueue);
+#endif
 
     /*
      *  Create tasks for commands receiving and handling
@@ -791,7 +827,7 @@ int main(void)
         goto ERROR;
 
 
-    taskResult &= createTask(vCommandHandlerTask, "CommandHanlderTask", NULL, TASK_DEFAULT_PRIORITY);
+    taskResult &= createTask(vCommandHandlerTask, "CommandHandlerTask", NULL, TASK_DEFAULT_PRIORITY);
     if (!taskResult)
         goto ERROR;
 

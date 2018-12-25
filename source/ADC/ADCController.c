@@ -39,10 +39,12 @@ void getADCDataValues(AdcDataValues* adcData)
     adcGetData(adcREG1, adcGROUP1, adcRawDataBuffer);
 
     // map received values
-    for (portSHORT i = 0; i < ADC_FIFO_SIZE; ++i)
+    portSHORT i = 0;
+    for (; i < ADC_FIFO_SIZE; ++i)
     {
         // check pins in mapper array
-        for (portSHORT j = 0; j < ADC_FIFO_SIZE; ++j)
+        portSHORT j = 0;
+        for (; j < ADC_FIFO_SIZE; ++j)
         {
             if (adcRawDataBuffer[i].id == mapper[j].adc_pin)
             {

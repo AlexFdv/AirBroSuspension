@@ -31,6 +31,9 @@ static const CommandInfo CommandsList[] =
     {CMD_MEM_CLEAR, "memclear", 8},
     {CMD_GET_BATTERY, "bat", 3},
     {CMD_COMPRESSOR,  "compr", 5},
+    {CMD_GET_COMPRESSOR_PRESSURE, "getcompr", 8},
+    {CMD_SET_COMPRESSOR_MAX_PRESSURE, "cmaxsave", 8},
+    {CMD_SET_COMPRESSOR_MIN_PRESSURE, "cminsave", 8},
     {CMD_GET_VERSION, "ver", 3}
 };
 

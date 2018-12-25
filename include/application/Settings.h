@@ -3,6 +3,7 @@
 
 #include "Levels.h"
 
+// total size is 24 bytes. If change - then change in halcogen as well
 typedef struct _Settings
 {
     uint16 compressor_preasure_max;

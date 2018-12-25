@@ -8,7 +8,7 @@
 #include <application/FEEController.h>
 #include "ti_fee.h"
 
-void delay(void)
+void static delay(void)
 {
     unsigned int dummycnt=0x0000FFU;
     do
@@ -17,7 +17,7 @@ void delay(void)
     } while(dummycnt > 0);
 }
 
-void waitForExecution()
+void static waitForExecution()
 {
     do
     {
