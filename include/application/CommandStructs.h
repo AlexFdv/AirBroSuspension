@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_
-#define INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_
+#ifndef INCLUDE_APPLICATION_COMMANDSTRUCTS_H_
+#define INCLUDE_APPLICATION_COMMANDSTRUCTS_H_
 
 #include "ConstantsCommon.h"
 #include "ADCController.h"
@@ -73,4 +73,4 @@ typedef struct
     TickType_t startTime;
 } WheelStatusStruct;
 
-#endif /* INCLUDE_APPLICATION_WHEELCOMMANDSTRUCTS_H_ */
+#endif /* INCLUDE_APPLICATION_COMMANDSTRUCTS_H_ */

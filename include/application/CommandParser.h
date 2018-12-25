@@ -8,7 +8,7 @@
 #ifndef INCLUDE_APPLICATION_COMMANDPARSER_H_
 #define INCLUDE_APPLICATION_COMMANDPARSER_H_
 
-#include "WheelCommandStructs.h"
+#include "CommandStructs.h"
 #include "os_portmacro.h"
 
 typedef struct

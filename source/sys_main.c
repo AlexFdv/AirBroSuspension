@@ -78,7 +78,7 @@
 #include <application/Levels.h>
 #include <application/HetConstants.h>
 #include <application/ConstantsCommon.h>
-#include <application/WheelCommandStructs.h>
+#include <application/CommandStructs.h>
 #include <application/CommandParser.h>
 
 
@@ -307,7 +307,6 @@ void sendToExecuteCommand(Command cmd)
             }
         }
 
-        // TODO: remove after moving pressure value to the diagnostic
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE ||
                 cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
         {
