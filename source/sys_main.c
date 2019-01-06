@@ -196,7 +196,7 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     {
         if (!getWheelLevelValue(i, &(retLevels->wheels[i])))
         {
-            printText("ERROR reading of level from mem task!!!");
+            printText("ERROR reading of level from mem task!!!\r\n");
             return false;
         }
     }
@@ -279,6 +279,8 @@ void sendToExecuteCommand(Command cmd)
                 printNumber(batteryVoltage);
             else
                 printText("ERROR getting battery value.");
+
+            printText("\n");
         }
 
         // TODO: remove after moving pressure value to the diagnostic
@@ -357,7 +359,7 @@ void sendToExecuteCommand(Command cmd)
             }
             else
             {
-                printText("Wrong wheel number specified");
+                printText("Wrong wheel number specified\r\n");
             }
         }
     }
@@ -390,16 +392,18 @@ void vMemTask( void *pvParameters )
         boolean result = popFromQueue(&memoryCommandsQueue,  &cmd);
         if (!result)
         {
-            printText("ERROR in memory task!!!");
+            printText("ERROR in memory task!!!\r\n");
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_GET)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
+            if (levelNumber < LEVELS_COUNT)
+                printLevels(&(cachedLevels[levelNumber]));
+            else
+                printText("Wrong level number specified \r\n");
 
-            printLevels(&(cachedLevels[levelNumber]));
             continue;
         }
 
@@ -545,13 +549,13 @@ void vCompressorTask( void *pvParameters )
         if (!isWorking && levelValue < cachedSettings.compressor_preasure_min)
         {
             isWorking = true;
-            printText("Compressor on");
+            printText("Compressor on\r\n");
             openPin(COMPRESSOR_HET_PIN);
         }
         else if (isWorking && levelValue > cachedSettings.compressor_preasure_max)
         {
             isWorking = false;
-            printText("Compressor off");
+            printText("Compressor off\r\n");
             closePin(COMPRESSOR_HET_PIN);
         }
 
@@ -721,7 +725,7 @@ void vWheelTask( void *pvParameters )
 
             if (cmd.commandType == UNKNOWN_COMMAND)
             {
-                printText("Unknown command received");
+                printText("Unknown command received\r\n");
                 continue; //loop
             }
         }

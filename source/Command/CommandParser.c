@@ -17,22 +17,22 @@
 //
 static const CommandInfo CommandsList[] =
 {
-    {CMD_WHEEL_UP,   "up", 2},
-    {CMD_WHEEL_DOWN, "down", 4},
-    {CMD_WHEEL_STOP, "stop", 4},
-    {CMD_WHEEL_AUTO, "auto", 4},
+    {CMD_WHEEL_UP,   "up", 2},   // done
+    {CMD_WHEEL_DOWN, "down", 4},    //done
+    {CMD_WHEEL_STOP, "stop", 4},    //done
+    {CMD_WHEEL_AUTO, "auto", 4},    //
     {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},
     {CMD_LEVELS_SAVE_MIN, "lminsave", 8},
     {CMD_LEVELS_SAVE, "lsave", 5},
-    {CMD_LEVELS_GET_MAX, "lmaxget", 7},
-    {CMD_LEVELS_GET_MIN, "lminget", 7},
-    {CMD_LEVELS_GET,  "lget", 4},
-    {CMD_LEVELS_SHOW, "lshow", 5},
+    {CMD_LEVELS_GET_MAX, "lmaxget", 7}, //done
+    {CMD_LEVELS_GET_MIN, "lminget", 7}, //done
+    {CMD_LEVELS_GET,  "lget", 4},   // done
+    {CMD_LEVELS_SHOW, "lshow", 5},  //done
     {CMD_MEM_CLEAR, "memclear", 8},
-    {CMD_GET_BATTERY, "bat", 3},
-    {CMD_GET_COMPRESSOR_PRESSURE, "getcompr", 8},
-    {CMD_SET_COMPRESSOR_MAX_PRESSURE, "cmaxsave", 8},
-    {CMD_SET_COMPRESSOR_MIN_PRESSURE, "cminsave", 8},
+    {CMD_GET_BATTERY, "bat", 3},    //done
+    {CMD_GET_COMPRESSOR_PRESSURE, "getcompr", 8},   //done
+    {CMD_SET_COMPRESSOR_MAX_PRESSURE, "cmaxsave", 8},   //
+    {CMD_SET_COMPRESSOR_MIN_PRESSURE, "cminsave", 8},   //
    // {CMD_GET_COMPRESSOR_MAX_PRESSURE, "cmaxget", 7},
    // {CMD_GET_COMPRESSOR_MIN_PRESSURE, "cminget", 7},
     {CMD_GET_VERSION, "ver", 3}
