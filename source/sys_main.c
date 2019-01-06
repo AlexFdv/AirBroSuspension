@@ -222,8 +222,9 @@ inline void printLevels(const LevelValues* const levels)
     for (; i < WHEELS_COUNT; ++i)
     {
         printNumber(levels->wheels[i]);
-        printText("\r\n");
+        printText(" ");
     }
+    printText("\n");
 }
 
 /*
@@ -239,9 +240,7 @@ void vCommandHandlerTask( void *pvParameters )
 
         if (popFromQueue(&commandsQueue, receivedCommand))
         {
-            printText("Received the command: ");
             printText(receivedCommand);
-            printText("\r\n");
 
             Command command = parseCommand(receivedCommand);
             sendToExecuteCommand(command);
@@ -268,12 +267,6 @@ void sendToExecuteCommand(Command cmd)
 
     if ((cmd.commandType & ENV_COMMAND_TYPE) == ENV_COMMAND_TYPE)
     {
-
-        /*if (cmd.Command == CMD_DIAGNOSTIC)
-        {
-            sciSendData((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
-        }*/
-
         if (cmd.commandType == CMD_GET_VERSION)
         {
             printText(VERSION);
@@ -288,15 +281,6 @@ void sendToExecuteCommand(Command cmd)
                 printText("ERROR getting battery value.");
         }
 
-        /*if (cmd.commandType == CMD_COMPRESSOR)
-        {
-            if (cmd.argc > 0)
-            {
-                compressorTimeoutSec = cmd.argv[0];
-            }
-            //giveSemaphore(&compressorSemaphore);
-        }*/
-
         // TODO: remove after moving pressure value to the diagnostic
         if (cmd.commandType == CMD_GET_COMPRESSOR_PRESSURE)
         {
@@ -304,6 +288,7 @@ void sendToExecuteCommand(Command cmd)
             if (getCurrentCompressorPressure(&level))
             {
                 printNumber(level);
+                printText("\n");
             }
         }
 
@@ -370,11 +355,15 @@ void sendToExecuteCommand(Command cmd)
             {
                 sendToQueueOverride(&wheelsCommandsQueues[wheelNo], (void*)&cmd); // always returns pdTRUE
             }
+            else
+            {
+                printText("Wrong wheel number specified");
+            }
         }
     }
 
     if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE
-            || (cmd.commandType & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE)
+            /*|| (cmd.commandType & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE*/)
     {
         // add command to the memory task queue: clear, save, print levels.
         // if arguments is empty, then default cell number is 0 (see vMemTask for details).
@@ -488,6 +477,8 @@ void vMemTask( void *pvParameters )
                     cachedSettings.compressor_preasure_min = level;
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+                printNumber(level);
+                printText("\n");
             }
             continue;
         }
@@ -501,6 +492,8 @@ void vMemTask( void *pvParameters )
                     cachedSettings.compressor_preasure_max = level;
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+                printNumber(level);
+                printText("\n");
             }
             continue;
         }

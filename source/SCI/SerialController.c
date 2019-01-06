@@ -31,6 +31,7 @@ void initializeSci(Callback dataCallback)
 
     memset(receivedCommand, 0, MAX_COMMAND_LEN);
 
+    // obligatory calls to finish initialization
     sciReceive(SCI_REG, 1, &receivedByte);
     sciReceive(SCILIN_REG, 1, &receivedByte);
 }
@@ -39,11 +40,13 @@ void sciNotification(sciBASE_t *sci, uint32 flags)
 {
     do
     {
-        if (receivedByte == STOP_CHAR || receivedLen >= MAX_COMMAND_LEN)
+        if (receivedByte == STOP_CHAR || receivedLen >= MAX_COMMAND_LEN-1)
         {
+            // callback to inform that reading is finished
             if (dataReceivedCallback != NULL_PTR)
                 dataReceivedCallback(receivedCommand, receivedLen);
 
+            // reset buffer before the next calls
             memset(receivedCommand, 0, MAX_COMMAND_LEN);
             receivedLen = 0;
 
