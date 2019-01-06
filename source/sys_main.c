@@ -451,6 +451,7 @@ void vMemTask( void *pvParameters )
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+                printLevels(&cachedSettings.levels_values_max);
             }
             continue;
         }
@@ -468,6 +469,7 @@ void vMemTask( void *pvParameters )
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+                printLevels(&cachedSettings.levels_values_min);
             }
             continue;
         }

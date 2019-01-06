@@ -21,8 +21,8 @@ static const CommandInfo CommandsList[] =
     {CMD_WHEEL_DOWN, "down", 4},    //done
     {CMD_WHEEL_STOP, "stop", 4},    //done
     {CMD_WHEEL_AUTO, "auto", 4},    //
-    {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},
-    {CMD_LEVELS_SAVE_MIN, "lminsave", 8},
+    {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},   //done
+    {CMD_LEVELS_SAVE_MIN, "lminsave", 8},   //done
     {CMD_LEVELS_SAVE, "lsave", 5},
     {CMD_LEVELS_GET_MAX, "lmaxget", 7}, //done
     {CMD_LEVELS_GET_MIN, "lminget", 7}, //done
