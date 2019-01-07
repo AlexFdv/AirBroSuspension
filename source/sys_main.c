@@ -410,7 +410,11 @@ void vMemTask( void *pvParameters )
         if (cmd.commandType == CMD_LEVELS_SAVE)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            levelNumber = (levelNumber >= LEVELS_COUNT) ? 0 : levelNumber;
+            if (levelNumber >= LEVELS_COUNT)
+            {
+                printText("Wrong level number specified \r\n");
+                continue;
+            }
 
             LevelValues currLevel;
             if (getCurrentWheelsLevelsValues(&currLevel))
@@ -421,8 +425,6 @@ void vMemTask( void *pvParameters )
                 GLOBAL_SYNC_END;
 
                 printLevels(&currLevel);
-                printText("levels saved to ");
-                printNumber(levelNumber);
                 printText("\r\n");
             }
             continue;
@@ -551,13 +553,13 @@ void vCompressorTask( void *pvParameters )
         if (!isWorking && levelValue < cachedSettings.compressor_preasure_min)
         {
             isWorking = true;
-            printText("Compressor on\r\n");
+            //printText("Compressor on\r\n");
             openPin(COMPRESSOR_HET_PIN);
         }
         else if (isWorking && levelValue > cachedSettings.compressor_preasure_max)
         {
             isWorking = false;
-            printText("Compressor off\r\n");
+            //printText("Compressor off\r\n");
             closePin(COMPRESSOR_HET_PIN);
         }
 
