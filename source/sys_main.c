@@ -295,7 +295,9 @@ void sendToExecuteCommand(Command cmd)
         }
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE ||
-                cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
+            cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE ||
+            cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE ||
+            cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
         {
             if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
             {
@@ -364,8 +366,7 @@ void sendToExecuteCommand(Command cmd)
         }
     }
 
-    if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE
-            /*|| (cmd.commandType & SETTINGS_COMMAND_TYPE) == SETTINGS_COMMAND_TYPE*/)
+    if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE)
     {
         // add command to the memory task queue: clear, save, print levels.
         // if arguments is empty, then default cell number is 0 (see vMemTask for details).
@@ -478,14 +479,14 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE)
         {
-            AdcValue_t level;
-            if (getCurrentCompressorPressure(&level))
+            AdcValue_t pressure;
+            if (getCurrentCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_min = level;
+                    cachedSettings.compressor_preasure_min = pressure;
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
-                printNumber(level);
+                printNumber(pressure);
                 printText("\n");
             }
             continue;
@@ -493,16 +494,30 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
         {
-            AdcValue_t level;
-            if (getCurrentCompressorPressure(&level))
+            AdcValue_t pressure;
+            if (getCurrentCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_max = level;
+                    cachedSettings.compressor_preasure_max = pressure;
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
-                printNumber(level);
+                printNumber(pressure);
                 printText("\n");
             }
+            continue;
+        }
+
+        if (cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
+        {
+            printNumber(cachedSettings.compressor_preasure_max);
+            printText("\n");
+            continue;
+        }
+
+        if (cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE)
+        {
+            printNumber(cachedSettings.compressor_preasure_min);
+            printText("\n");
             continue;
         }
 

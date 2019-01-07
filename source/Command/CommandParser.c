@@ -33,8 +33,8 @@ static const CommandInfo CommandsList[] =
     {CMD_GET_COMPRESSOR_PRESSURE, "getcompr", 8},   //done
     {CMD_SET_COMPRESSOR_MAX_PRESSURE, "cmaxsave", 8},   // done
     {CMD_SET_COMPRESSOR_MIN_PRESSURE, "cminsave", 8},   // done
-   // {CMD_GET_COMPRESSOR_MAX_PRESSURE, "cmaxget", 7},
-   // {CMD_GET_COMPRESSOR_MIN_PRESSURE, "cminget", 7},
+    {CMD_GET_COMPRESSOR_MAX_PRESSURE, "cmaxget", 7},
+    {CMD_GET_COMPRESSOR_MIN_PRESSURE, "cminget", 7},
     {CMD_GET_VERSION, "ver", 3}
 };
 
