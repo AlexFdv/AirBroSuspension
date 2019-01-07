@@ -692,21 +692,6 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
         volatile portSHORT elapsedTimeSec = (getTickCount() - wheelStatus->startTime) / configTICK_RATE_HZ;
         wheelStatus->isWorking = elapsedTimeSec < wheelStatus->timeoutSec;
     }
-
-    /*
-     * Check status pin
-     * */
-    /*if ((wheelStatus->cmdType == CMD_WHEEL_UP && getPin(wheelStatus->wheelPins.upPinStatus) != 1)
-        || (wheelStatus->cmdType == CMD_WHEEL_DOWN && getPin(wheelStatus->wheelPins.downPinStatus) != 1))
-    {
-        wheelStatus->isWorking = false;
-
-
-         // Array from 0 to 7, from "front left up" to "back right down" wheel.
-
-        diagnostic.wheels_stats[wheelStatus->wheelNumber * 2] = getPin(wheelStatus->wheelPins.upPinStatus);
-        diagnostic.wheels_stats[wheelStatus->wheelNumber * 2 + 1] = getPin(wheelStatus->wheelPins.downPinStatus);
-    }*/
 }  // executeWheelLogic
 
 void vWheelTask( void *pvParameters )
@@ -826,15 +811,34 @@ void vTelemetryTask( void *pvParameters )
 {
     for(;;)
     {
-
         for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
         {
             readFromQueue(&adcValuesQueues[i], &(diagnostic.adc_values.values[i]));
         }
 
+        // Array from 0 to 7, from "front left up" to "back right down" wheel.
+/*
+       diagnostic.wheels_stats[0] = getPin(wheelPinsFL.upPinStatus);
+       diagnostic.wheels_stats[1] = getPin(wheelPinsFL.downPinStatus);
+       diagnostic.wheels_stats[2] = getPin(wheelPinsFR.upPinStatus);
+       diagnostic.wheels_stats[3] = getPin(wheelPinsFR.downPinStatus);
+       diagnostic.wheels_stats[4] = getPin(wheelPinsBL.upPinStatus);
+       diagnostic.wheels_stats[5] = getPin(wheelPinsBL.downPinStatus);
+       diagnostic.wheels_stats[6] = getPin(wheelPinsBR.upPinStatus);
+       diagnostic.wheels_stats[7] = getPin(wheelPinsBR.downPinStatus);
+*/
+        diagnostic.wheels_stats[0] = getPin(wheelPinsFL.upPin);
+        diagnostic.wheels_stats[1] = getPin(wheelPinsFL.downPin);
+        diagnostic.wheels_stats[2] = getPin(wheelPinsFR.upPin);
+        diagnostic.wheels_stats[3] = getPin(wheelPinsFR.downPin);
+        diagnostic.wheels_stats[4] = getPin(wheelPinsBL.upPin);
+        diagnostic.wheels_stats[5] = getPin(wheelPinsBL.downPin);
+        diagnostic.wheels_stats[6] = getPin(wheelPinsBR.upPin);
+        diagnostic.wheels_stats[7] = getPin(wheelPinsBR.downPin);
+
         sciSendDataLin((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
 
-        delayTask(MS_TO_TICKS(1000));
+        delayTask(MS_TO_TICKS(5000));
 
         DUMMY_BREAK;
     }
