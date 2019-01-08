@@ -400,10 +400,10 @@ void vMemTask( void *pvParameters )
         if (cmd.commandType == CMD_LEVELS_GET)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            if (levelNumber < LEVELS_COUNT)
+            if (levelNumber < LEVELS_COUNT && cmd.argc != 0)
                 printLevels(&(cachedLevels[levelNumber]));
             else
-                printText("Wrong level number specified \r\n");
+                printText("Wrong level number specified\r\n");
 
             continue;
         }
@@ -411,9 +411,9 @@ void vMemTask( void *pvParameters )
         if (cmd.commandType == CMD_LEVELS_SAVE)
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            if (levelNumber >= LEVELS_COUNT)
+            if (levelNumber >= LEVELS_COUNT || cmd.argc == 0)
             {
-                printText("Wrong level number specified \r\n");
+                printText("Wrong level number specified\r\n");
                 continue;
             }
 
@@ -426,7 +426,6 @@ void vMemTask( void *pvParameters )
                 GLOBAL_SYNC_END;
 
                 printLevels(&currLevel);
-                printText("\r\n");
             }
             continue;
         }
@@ -450,7 +449,7 @@ void vMemTask( void *pvParameters )
                     portSHORT i = 0;
                     for (;i<WHEELS_COUNT; ++i)
                     {
-                        cachedSettings.levels_values_max.wheels[i] = currLevel.wheels[i];
+                        cachedSettings.levels_values_max.wheels[i] = (cmd.argc==0)?currLevel.wheels[i]:cmd.argv[0];
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
@@ -468,7 +467,7 @@ void vMemTask( void *pvParameters )
                     portSHORT i = 0;
                     for (; i < WHEELS_COUNT; ++i)
                     {
-                        cachedSettings.levels_values_min.wheels[i] = currLevel.wheels[i];
+                        cachedSettings.levels_values_min.wheels[i] = (cmd.argc==0)?currLevel.wheels[i]:cmd.argv[0];
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
@@ -483,10 +482,10 @@ void vMemTask( void *pvParameters )
             if (getCurrentCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_min = pressure;
+                    cachedSettings.compressor_preasure_min = (cmd.argc==0)?pressure:cmd.argv[0];
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
-                printNumber(pressure);
+                printNumber(cachedSettings.compressor_preasure_min);
                 printText("\n");
             }
             continue;
@@ -498,10 +497,10 @@ void vMemTask( void *pvParameters )
             if (getCurrentCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_max = pressure;
+                    cachedSettings.compressor_preasure_max = (cmd.argc==0)?pressure:cmd.argv[0];
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
-                printNumber(pressure);
+                printNumber(cachedSettings.compressor_preasure_max);
                 printText("\n");
             }
             continue;
@@ -817,24 +816,24 @@ void vTelemetryTask( void *pvParameters )
         }
 
         // Array from 0 to 7, from "front left up" to "back right down" wheel.
-/*
-       diagnostic.wheels_stats[0] = getPin(wheelPinsFL.upPinStatus);
-       diagnostic.wheels_stats[1] = getPin(wheelPinsFL.downPinStatus);
-       diagnostic.wheels_stats[2] = getPin(wheelPinsFR.upPinStatus);
-       diagnostic.wheels_stats[3] = getPin(wheelPinsFR.downPinStatus);
-       diagnostic.wheels_stats[4] = getPin(wheelPinsBL.upPinStatus);
-       diagnostic.wheels_stats[5] = getPin(wheelPinsBL.downPinStatus);
-       diagnostic.wheels_stats[6] = getPin(wheelPinsBR.upPinStatus);
-       diagnostic.wheels_stats[7] = getPin(wheelPinsBR.downPinStatus);
-*/
-        diagnostic.wheels_stats[0] = getPin(wheelPinsFL.upPin);
-        diagnostic.wheels_stats[1] = getPin(wheelPinsFL.downPin);
-        diagnostic.wheels_stats[2] = getPin(wheelPinsFR.upPin);
-        diagnostic.wheels_stats[3] = getPin(wheelPinsFR.downPin);
-        diagnostic.wheels_stats[4] = getPin(wheelPinsBL.upPin);
-        diagnostic.wheels_stats[5] = getPin(wheelPinsBL.downPin);
-        diagnostic.wheels_stats[6] = getPin(wheelPinsBR.upPin);
-        diagnostic.wheels_stats[7] = getPin(wheelPinsBR.downPin);
+
+        diagnostic.wheels_stats[0] = getPin(wheelPinsFL.upPinStatus);
+        diagnostic.wheels_stats[1] = getPin(wheelPinsFL.downPinStatus);
+        diagnostic.wheels_stats[2] = getPin(wheelPinsFR.upPinStatus);
+        diagnostic.wheels_stats[3] = getPin(wheelPinsFR.downPinStatus);
+        diagnostic.wheels_stats[4] = getPin(wheelPinsBL.upPinStatus);
+        diagnostic.wheels_stats[5] = getPin(wheelPinsBL.downPinStatus);
+        diagnostic.wheels_stats[6] = getPin(wheelPinsBR.upPinStatus);
+        diagnostic.wheels_stats[7] = getPin(wheelPinsBR.downPinStatus);
+
+        diagnostic.wheel_pins[0] = getPin(wheelPinsFL.upPin);
+        diagnostic.wheel_pins[1] = getPin(wheelPinsFL.downPin);
+        diagnostic.wheel_pins[2] = getPin(wheelPinsFR.upPin);
+        diagnostic.wheel_pins[3] = getPin(wheelPinsFR.downPin);
+        diagnostic.wheel_pins[4] = getPin(wheelPinsBL.upPin);
+        diagnostic.wheel_pins[5] = getPin(wheelPinsBL.downPin);
+        diagnostic.wheel_pins[6] = getPin(wheelPinsBR.upPin);
+        diagnostic.wheel_pins[7] = getPin(wheelPinsBR.downPin);
 
         sciSendDataLin((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
 

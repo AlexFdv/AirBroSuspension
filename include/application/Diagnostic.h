@@ -13,6 +13,7 @@
 
 typedef struct
 {
+    bool wheel_pins[WHEELS_COUNT * 2];
     bool wheels_stats[WHEELS_COUNT * 2];
     AdcDataValues adc_values;
 
