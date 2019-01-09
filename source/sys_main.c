@@ -403,7 +403,7 @@ void vMemTask( void *pvParameters )
             if (levelNumber < LEVELS_COUNT && cmd.argc != 0)
                 printLevels(&(cachedLevels[levelNumber]));
             else
-                printText("Wrong level number specified\r\n");
+                printText("Wrong level number specified");
 
             continue;
         }
@@ -413,7 +413,7 @@ void vMemTask( void *pvParameters )
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             if (levelNumber >= LEVELS_COUNT || cmd.argc == 0)
             {
-                printText("Wrong level number specified\r\n");
+                printText("Wrong level number specified");
                 continue;
             }
 
