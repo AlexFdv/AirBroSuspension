@@ -222,9 +222,8 @@ inline void printLevels(const LevelValues* const levels)
     for (; i < WHEELS_COUNT; ++i)
     {
         printNumber(levels->wheels[i]);
-        printText(" ");
+        printText(":");
     }
-    printText("\n");
 }
 
 /*
@@ -240,14 +239,14 @@ void vCommandHandlerTask( void *pvParameters )
 
         if (popFromQueue(&commandsQueue, receivedCommand))
         {
-            printText(receivedCommand);
+            //printText(receivedCommand);
 
             Command command = parseCommand(receivedCommand);
             sendToExecuteCommand(command);
         }
         else
         {
-            printText("Could not receive a value from the queue.\r\n");
+            printText("#ERROR:Could not receive a value from the queue.\r\n");
         }
 
         DUMMY_BREAK;
@@ -261,7 +260,7 @@ void sendToExecuteCommand(Command cmd)
 {
     if (cmd.commandType == UNKNOWN_COMMAND)
     {
-        printText("Unknown command received\r\n");
+        printText("#ERROR:01:Unknown command received\n");
         return;
     }
 
@@ -269,18 +268,22 @@ void sendToExecuteCommand(Command cmd)
     {
         if (cmd.commandType == CMD_GET_VERSION)
         {
+            printText("#OK:");
             printText(VERSION);
+            printText("\n");
         }
 
         if (cmd.commandType == CMD_GET_BATTERY)
         {
             portLONG batteryVoltage = 0;
             if (getBatteryVoltage(&batteryVoltage))
+            {
+                printText("#OK:");
                 printNumber(batteryVoltage);
+                printText("\n");
+            }
             else
-                printText("ERROR getting battery value.");
-
-            printText("\n");
+                printText("#ERROR:cannot get battery value.\n");
         }
 
         // TODO: remove after moving pressure value to the diagnostic
@@ -289,9 +292,12 @@ void sendToExecuteCommand(Command cmd)
             AdcValue_t level;
             if (getCurrentCompressorPressure(&level))
             {
+                printText("#OK:");
                 printNumber(level);
                 printText("\n");
             }
+            else
+                printText("#ERROR:cannot get compressor value.\n");
         }
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE ||
@@ -301,7 +307,7 @@ void sendToExecuteCommand(Command cmd)
         {
             if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
             {
-                printText("Could not add memory command to the queue (it is full).\r\n");
+                printText("#ERROR:Could not add memory command to the queue (it is full).\n");
             }
         }
     }
@@ -311,6 +317,8 @@ void sendToExecuteCommand(Command cmd)
         // detect up or down based on current level values.
         if (cmd.commandType == CMD_WHEEL_AUTO)
         {
+            printText("#OK\n");
+
             LevelValues currentLevels;
             if (cmd.argc > 0 && getCurrentWheelsLevelsValues(&currentLevels))
             {
@@ -324,6 +332,7 @@ void sendToExecuteCommand(Command cmd)
                 {
                     if (currentLevels.wheels[i] == pCurrentTargetLevels->wheels[i])
                         continue;
+
                     newCmd.commandType = (currentLevels.wheels[i] < pCurrentTargetLevels->wheels[i]) ? CMD_WHEEL_UP : CMD_WHEEL_DOWN;
                     newCmd.argv[0] = i;   // not used for 'auto', but level number should be at argv[1] anyway
                     newCmd.argv[1] = savedLevelNumber;  // level number
@@ -344,6 +353,8 @@ void sendToExecuteCommand(Command cmd)
         // execute any other WHEEL_COMMAND_TYPE command for all wheels if there is no arguments (up, down or stop)
         else if (cmd.argc == 0)
         {
+            printText("#OK\n");
+
             // for all wheels
             portSHORT i = 0;
             for (; i< WHEELS_COUNT; ++i)
@@ -357,11 +368,12 @@ void sendToExecuteCommand(Command cmd)
             WHEEL_IDX wheelNo = (WHEEL_IDX)cmd.argv[0];
             if (wheelNo < WHEELS_COUNT)
             {
+                printText("#OK\n");
                 sendToQueueOverride(&wheelsCommandsQueues[wheelNo], (void*)&cmd); // always returns pdTRUE
             }
             else
             {
-                printText("Wrong wheel number specified\r\n");
+                printText("#ERROR:2:Wrong wheel number specified\n");
             }
         }
     }
@@ -372,7 +384,7 @@ void sendToExecuteCommand(Command cmd)
         // if arguments is empty, then default cell number is 0 (see vMemTask for details).
         if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*)&cmd, 0))
         {
-            printText("Could not add memory command to the queue (it is full).\r\n");
+            printText("#ERROR:Could not add memory command to the queue (it is full).\n");
         }
     }
 }
@@ -393,7 +405,7 @@ void vMemTask( void *pvParameters )
         boolean result = popFromQueue(&memoryCommandsQueue,  &cmd);
         if (!result)
         {
-            printText("ERROR in memory task!!!\r\n");
+            printText("#ERROR:Critical memory task error!\n");
             continue;
         }
 
@@ -401,9 +413,13 @@ void vMemTask( void *pvParameters )
         {
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             if (levelNumber < LEVELS_COUNT && cmd.argc != 0)
+            {
+                printText("#OK:");
                 printLevels(&(cachedLevels[levelNumber]));
+                printText("\n");
+            }
             else
-                printText("Wrong level number specified");
+                printText("#ERROR:3:Wrong level number specified\n");
 
             continue;
         }
@@ -413,29 +429,33 @@ void vMemTask( void *pvParameters )
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             if (levelNumber >= LEVELS_COUNT || cmd.argc == 0)
             {
-                printText("Wrong level number specified");
+                printText("#ERROR:3:Wrong level number specified\n");
                 continue;
             }
 
-            LevelValues currLevel;
-            if (getCurrentWheelsLevelsValues(&currLevel))
+            LevelValues currLevels;
+            if (getCurrentWheelsLevelsValues(&currLevels))
             {
                 GLOBAL_SYNC_START;
-                    cachedLevels[levelNumber] = currLevel;
+                    cachedLevels[levelNumber] = currLevels;
                     writeLevels((void*)&cachedLevels);
                 GLOBAL_SYNC_END;
 
-                printLevels(&currLevel);
+                printText("#OK:");
+                printLevels(&currLevels);
+                printText("\n");
             }
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_SHOW)
         {
-            LevelValues currLevel;
-            if (getCurrentWheelsLevelsValues(&currLevel))
+            LevelValues currLevels;
+            if (getCurrentWheelsLevelsValues(&currLevels))
             {
-                printLevels(&currLevel);
+                printText("#OK:");
+                printLevels(&currLevels);
+                printText("\n");
             }
             continue;
         }
@@ -453,7 +473,10 @@ void vMemTask( void *pvParameters )
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+
+                printText("#OK:");
                 printLevels(&cachedSettings.levels_values_max);
+                printText("\n");
             }
             continue;
         }
@@ -471,7 +494,10 @@ void vMemTask( void *pvParameters )
                     }
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+
+                printText("#OK:");
                 printLevels(&cachedSettings.levels_values_min);
+                printText("\n");
             }
             continue;
         }
@@ -485,6 +511,8 @@ void vMemTask( void *pvParameters )
                     cachedSettings.compressor_preasure_min = (cmd.argc==0)?pressure:cmd.argv[0];
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+
+                printText("#OK:");
                 printNumber(cachedSettings.compressor_preasure_min);
                 printText("\n");
             }
@@ -500,6 +528,8 @@ void vMemTask( void *pvParameters )
                     cachedSettings.compressor_preasure_max = (cmd.argc==0)?pressure:cmd.argv[0];
                     writeSettings(&cachedSettings);
                 GLOBAL_SYNC_END;
+
+                printText("#OK:");
                 printNumber(cachedSettings.compressor_preasure_max);
                 printText("\n");
             }
@@ -508,6 +538,7 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
         {
+            printText("#OK:");
             printNumber(cachedSettings.compressor_preasure_max);
             printText("\n");
             continue;
@@ -515,6 +546,7 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE)
         {
+            printText("#OK:");
             printNumber(cachedSettings.compressor_preasure_min);
             printText("\n");
             continue;
@@ -522,13 +554,18 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_LEVELS_GET_MAX)
         {
+            printText("#OK:");
             printLevels(&(cachedSettings.levels_values_max));
+            printText("\n");
+
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_GET_MIN)
         {
+            printText("#OK:");
             printLevels(&(cachedSettings.levels_values_min));
+            printText("\n");
             continue;
         }
 
@@ -560,7 +597,7 @@ void vCompressorTask( void *pvParameters )
 
         if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
         {
-            printText("ERROR!!! Timeout at compressor value reading from the queue!!!\r\n");
+            printText("#ERROR:Critical error. Timeout at compressor value reading from the queue!\n");
             continue;
         }
 
@@ -628,7 +665,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
     AdcValue_t levelValue = 0;
     if (!readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber], &levelValue, 0))
     {
-        printText("ERROR!!! Timeout at level value reading from the queue!!!\r\n");
+        printText("#ERROR:Critical error. Timeout at level value reading from the queue!\n");
         wheelStatus->isWorking = false;
         return;
     }
@@ -643,7 +680,7 @@ void executeWheelLogic(WheelStatusStruct* wheelStatus)
         AdcValue_t average_delta = 0;
         if (!readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
-            printText("ERROR!!! Timeout at average level value reading from the queue!!!\r\n");
+            printText("#ERROR:Critical error. Timeout at average level value reading from the queue!\n");
             wheelStatus->isWorking = false;
             return;
         }
@@ -728,7 +765,7 @@ void vWheelTask( void *pvParameters )
 
             if (cmd.commandType == UNKNOWN_COMMAND)
             {
-                printText("Unknown command received\r\n");
+                printText("#ERROR:01:Unknown command received in wheel task\n");
                 continue; //loop
             }
         }
@@ -947,7 +984,7 @@ int main(void)
     vTaskStartScheduler();
 
 ERROR:
-    printText("Initialization error\r\n");
+    printText("#ERROR:Initialization error.\n");
     while(1) DUMMY_BREAK;
 
     /* USER CODE END */

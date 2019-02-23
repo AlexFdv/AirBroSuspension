@@ -48,10 +48,14 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
          0
     };
 
+    if (command[0] != '#')
+        return parsedCommand;
+
     portSHORT i = 0;
     for (; i<ARRSIZE(CommandsList); ++i)
     {
-        if (0 == strncmp(command, CommandsList[i].cmdValue, CommandsList[i].cmdLen))
+        // TODO: Compare until ':'
+        if (0 == strncmp(command+1, CommandsList[i].cmdValue, CommandsList[i].cmdLen))
         {
             parsedCommand.commandType = CommandsList[i].cmdType;
             parseParams(command, &parsedCommand);
@@ -65,7 +69,7 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 
 void parseParams(const char* const strCmd, Command* const retCommand )
 {
-    portCHAR* str = strchr(strCmd, ' ');
+    portCHAR* str = strchr(strCmd, ':');
     while (str != NULL)
     {
         ++str;

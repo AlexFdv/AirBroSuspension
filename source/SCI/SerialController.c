@@ -22,7 +22,7 @@ short receivedLen = 0;
 uint8 receivedCommand[MAX_COMMAND_LEN] = {'\0'};
 uint8 receivedByte;
 
-#define STOP_CHAR 0x0D
+#define STOP_CHAR 0x0A //0x0D = enter, 0x0A = \n
 
 void initializeSci(Callback dataCallback)
 {
@@ -38,23 +38,19 @@ void initializeSci(Callback dataCallback)
 
 void sciNotification(sciBASE_t *sci, uint32 flags)
 {
-    do
+    receivedLen++;
+    if (receivedByte == STOP_CHAR || receivedLen >= MAX_COMMAND_LEN - 1)
     {
-        if (receivedByte == STOP_CHAR || receivedLen >= MAX_COMMAND_LEN-1)
-        {
-            // callback to inform that reading is finished
-            if (dataReceivedCallback != NULL_PTR)
-                dataReceivedCallback(receivedCommand, receivedLen);
+        // callback to inform that reading is finished
+        if (dataReceivedCallback != NULL_PTR)
+            dataReceivedCallback(receivedCommand, receivedLen);
 
-            // reset buffer before the next calls
-            memset(receivedCommand, 0, MAX_COMMAND_LEN);
-            receivedLen = 0;
-
-            break;
-        }
-
-        receivedCommand[receivedLen++] = receivedByte;
-    } while (0);
+        // reset buffer before the next calls
+        memset(receivedCommand, 0, MAX_COMMAND_LEN);
+        receivedLen = 0;
+    }
+    else
+        receivedCommand[receivedLen - 1] = receivedByte;
 
     sciReceive(sci, 1, &receivedByte);
 }
