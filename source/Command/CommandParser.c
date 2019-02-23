@@ -11,6 +11,7 @@
 #include "StringUtils.h"
 
 #define ARRSIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define DELIMITER_CHAR ':'
 
 //
 // max command size is MAX_COMMAND_LEN = 10 for now.
@@ -69,17 +70,17 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 
 void parseParams(const char* const strCmd, Command* const retCommand )
 {
-    portCHAR* str = strchr(strCmd, ':');
+    portCHAR* str = strchr(strCmd, DELIMITER_CHAR);
     while (str != NULL)
     {
         ++str;
-        if (isDigits(str, ' '))
+        if (isDigits(str, DELIMITER_CHAR))
         {
             portSHORT param = atoi(str);
             retCommand->argv[retCommand->argc] = param;
             retCommand->argc++;
 
-            str = strchr(str, ' ');
+            str = strchr(str, DELIMITER_CHAR);
         }
         else
         {

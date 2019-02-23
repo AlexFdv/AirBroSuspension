@@ -196,7 +196,7 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     {
         if (!getWheelLevelValue(i, &(retLevels->wheels[i])))
         {
-            printText("ERROR reading of level from mem task!!!\r\n");
+            printText("#ERROR:00:Could not read the wheel level from mem task!\r\n");
             return false;
         }
     }
@@ -433,18 +433,29 @@ void vMemTask( void *pvParameters )
                 continue;
             }
 
+            bool useDummyValue = (cmd.argc == 2);
             LevelValues currLevels;
-            if (getCurrentWheelsLevelsValues(&currLevels))
-            {
-                GLOBAL_SYNC_START;
-                    cachedLevels[levelNumber] = currLevels;
-                    writeLevels((void*)&cachedLevels);
-                GLOBAL_SYNC_END;
 
-                printText("#OK:");
-                printLevels(&currLevels);
-                printText("\n");
+            if (useDummyValue)
+            {
+                portSHORT i = 0;
+                for (; i< WHEELS_COUNT;++i)
+                    currLevels.wheels[i] = cmd.argv[1];
             }
+            else if (!getCurrentWheelsLevelsValues(&currLevels))
+            {
+                continue;
+            }
+
+            GLOBAL_SYNC_START;
+                cachedLevels[levelNumber] = currLevels;
+                writeLevels((void*)&cachedLevels);
+            GLOBAL_SYNC_END;
+
+            printText("#OK:");
+            printLevels(&currLevels);
+            printText("\n");
+
             continue;
         }
 
