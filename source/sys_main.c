@@ -176,6 +176,53 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
+inline void printLevels(const LevelValues* const levels)
+{
+    portSHORT i = 0;
+    for (; i < WHEELS_COUNT; ++i)
+    {
+        printNumber(levels->wheels[i]);
+        printText(":");
+    }
+}
+
+
+inline void printError(int code, const portCHAR* text)
+{
+    printText("#ERROR:");
+    printNumber(code);
+    printText(":");
+    printText(text);
+    printText("\n");
+}
+
+inline void printSuccess()
+{
+    printText("#OK\n");
+}
+
+inline void printSuccessString(const portCHAR* text)
+{
+    printText("#OK:");
+    printText(text);
+    printText("\n");
+}
+
+inline void printSuccessNumber(const portLONG number)
+{
+    printText("#OK:");
+    printNumber(number);
+    printText("\n");
+}
+
+inline void printSuccessLevels(const LevelValues* const levels)
+{
+    printText("#OK:");
+    printLevels(levels);
+    printText("\n");
+}
+
+
 inline bool getBatteryVoltage(portLONG* const retVoltage)
 {
     uint16 adcValue = 0;
@@ -224,15 +271,7 @@ inline bool getCurrentCompressorPressure(AdcValue_t* const retLevel)
 }
 
 
-inline void printLevels(const LevelValues* const levels)
-{
-    portSHORT i = 0;
-    for (; i < WHEELS_COUNT; ++i)
-    {
-        printNumber(levels->wheels[i]);
-        printText(":");
-    }
-}
+
 
 /*
  * Tasks implementation
@@ -262,40 +301,6 @@ void vCommandHandlerTask( void *pvParameters )
     deleteTask();
 }
 
-inline void printError(int code, const portCHAR* text)
-{
-    printText("#ERROR:");
-    printNumber(code);
-    printText(":");
-    printText(text);
-    printText("\n");
-}
-
-inline void printSuccess()
-{
-    printText("#OK\n");
-}
-
-inline void printSuccessString(const portCHAR* text)
-{
-    printText("#OK:");
-    printText(text);
-    printText("\n");
-}
-
-inline void printSuccessNumber(const portLONG number)
-{
-    printText("#OK:");
-    printNumber(number);
-    printText("\n");
-}
-
-inline void printSuccessLevels(const LevelValues* const levels)
-{
-    printText("#OK:");
-    printLevels(levels);
-    printText("\n");
-}
 
 
 void sendToExecuteCommand(Command cmd)
