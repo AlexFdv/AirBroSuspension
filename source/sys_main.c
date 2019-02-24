@@ -876,6 +876,10 @@ void vADCUpdaterTask( void *pvParameters )
 
 void vTelemetryTask( void *pvParameters )
 {
+    int n = 0;
+    Diagnostic emptyDiagnostic;
+    memset((void*)&emptyDiagnostic, 12, sizeof(Diagnostic));
+
     for(;;)
     {
         for (portSHORT i = 0; i< ADC_FIFO_SIZE; ++i)
@@ -905,7 +909,13 @@ void vTelemetryTask( void *pvParameters )
 
         sciSendDataLin((uint8*)&diagnostic, (portSHORT)sizeof(Diagnostic));
 
-        delayTask(MS_TO_TICKS(5000));
+        if (++n == 5)
+        {
+            sciSendDataLin((uint8*)&emptyDiagnostic, (portSHORT)sizeof(Diagnostic));
+            n = 0;
+        }
+
+        delayTask(MS_TO_TICKS(50));
 
         DUMMY_BREAK;
     }
