@@ -915,7 +915,7 @@ void vTelemetryTask( void *pvParameters )
             n = 0;
         }
 
-        delayTask(MS_TO_TICKS(50));
+        delayTask(MS_TO_TICKS(100));
 
         DUMMY_BREAK;
     }
