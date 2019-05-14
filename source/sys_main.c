@@ -46,7 +46,7 @@
 
 #define DUMMY_BREAK if (0) break
 
-#define VERSION "0.0.2"
+#define VERSION "0.0.3"
 
 /* USER CODE END */
 
@@ -154,7 +154,8 @@ enum error_codes
     WrongWheelSpecifiedErrorCode = 2,
     WrongLevelSpecifiedErrorCode = 3,
     QueueReadTimeoutErrorCode = 4,
-    MemoryQueueErrorCode = 5
+    MemoryQueueErrorCode = 5,
+    CommandsQueueErrorCode = 6
 
 };
 
@@ -286,14 +287,12 @@ void vCommandHandlerTask( void *pvParameters )
 
         if (popFromQueue(&commandsQueue, receivedCommand))
         {
-            //printText(receivedCommand);
-
             Command command = parseCommand(receivedCommand);
             sendToExecuteCommand(command);
         }
         else
         {
-            printText("#ERROR:00:Could not receive a value from the queue.\n");
+            printError(CommandsQueueErrorCode, "Could not receive a value from the queue.");
         }
 
         DUMMY_BREAK;
@@ -308,7 +307,6 @@ void sendToExecuteCommand(Command cmd)
     if (cmd.commandType == UNKNOWN_COMMAND)
     {
         printError(UnknownCommandErrorCode, "Unknown command received");
-        //printText("#ERROR:01:Unknown command received\n");
         return;
     }
 
@@ -454,9 +452,7 @@ void vMemTask( void *pvParameters )
             portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
             if (levelNumber < LEVELS_COUNT && cmd.argc != 0)
             {
-                printText("#OK:");
-                printLevels(&(cachedLevels[levelNumber]));
-                printText("\n");
+                printSuccessLevels(&(cachedLevels[levelNumber]));
             }
             else
             {
