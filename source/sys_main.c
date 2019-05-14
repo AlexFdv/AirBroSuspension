@@ -114,7 +114,7 @@ static Queue adcValuesQueues[ADC_FIFO_SIZE];    // adc values have specific orde
 static Queue adcAverageQueue;
 #endif
 
-static Semaphore compressorSemaphore;
+static Semaphore uartMutexSemaphore;
 static portSHORT compressorTimeoutSec;
 
 static LevelValues cachedLevels[LEVELS_COUNT];
@@ -190,37 +190,55 @@ inline void printLevels(const LevelValues* const levels)
 
 inline void printError(int code, const portCHAR* text)
 {
+    takeSemaphore(&uartMutexSemaphore);
+
     printText("#ERROR:");
     printNumber(code);
     printText(":");
     printText(text);
     printText("\n");
+
+    giveSemaphore(&uartMutexSemaphore);
 }
 
 inline void printSuccess()
 {
+    takeSemaphore(&uartMutexSemaphore);
     printText("#OK\n");
+    giveSemaphore(&uartMutexSemaphore);
 }
 
 inline void printSuccessString(const portCHAR* text)
 {
+    takeSemaphore(&uartMutexSemaphore);
+
     printText("#OK:");
     printText(text);
     printText("\n");
+
+    giveSemaphore(&uartMutexSemaphore);
 }
 
 inline void printSuccessNumber(const portLONG number)
 {
+    takeSemaphore(&uartMutexSemaphore);
+
     printText("#OK:");
     printNumber(number);
     printText("\n");
+
+    giveSemaphore(&uartMutexSemaphore);
 }
 
 inline void printSuccessLevels(const LevelValues* const levels)
 {
+    takeSemaphore(&uartMutexSemaphore);
+
     printText("#OK:");
     printLevels(levels);
     printText("\n");
+
+    giveSemaphore(&uartMutexSemaphore);
 }
 
 
@@ -617,8 +635,6 @@ void vCompressorTask( void *pvParameters )
 
     for(;;)
     {
-        //takeSemaphore(&compressorSemaphore);
-
         // time delay before each check if compressor is not working.
         if (!isWorking)
             delayTask(MS_TO_TICKS(compressorTimeoutSec * 1000));
@@ -966,8 +982,8 @@ int main(void)
      */
 
     bool taskResult = true;
-    compressorSemaphore = createBinarySemaphore();
-    if (compressorSemaphore.handle == NULL)
+    uartMutexSemaphore = createMutexSemaphore();
+    if (uartMutexSemaphore.handle == NULL)
         goto ERROR;
 
 

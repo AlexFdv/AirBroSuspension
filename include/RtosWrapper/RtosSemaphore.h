@@ -17,6 +17,7 @@ typedef struct
 } Semaphore;
 
 Semaphore createBinarySemaphore();
+Semaphore createMutexSemaphore();
 void takeSemaphore(const Semaphore* const semaphore);
 void giveSemaphore(const Semaphore* const semaphore);
 

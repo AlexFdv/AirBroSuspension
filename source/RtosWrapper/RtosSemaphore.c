@@ -14,6 +14,13 @@ Semaphore createBinarySemaphore()
     return semaphore;
 }
 
+Semaphore createMutexSemaphore()
+{
+    Semaphore semaphore;
+    semaphore.handle = xSemaphoreCreateMutex();
+    return semaphore;
+}
+
 void takeSemaphore(const Semaphore* const semaphore)
 {
     xSemaphoreTake(semaphore->handle, portMAX_DELAY);
