@@ -1,7 +1,7 @@
 /*
  * Parser.h
  *
- *  Created on: 6 жовт. 2018 р.
+ *  Created on: 6 пїЅпїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
@@ -11,14 +11,19 @@
 #include "CommandStructs.h"
 #include "os_portmacro.h"
 
+typedef bool (*commandHandler)(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+
 typedef struct
 {
     COMMAND_TYPE cmdType;
     portCHAR* cmdValue;
     portSHORT cmdLen;
+    commandHandler handler;
 } CommandInfo;
 
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN]);
 void parseParams(const char* const strCmd, Command* const retCommand );
+
+bool executeCommand(const Command* command);
 
 #endif /* INCLUDE_APPLICATION_COMMANDPARSER_H_ */

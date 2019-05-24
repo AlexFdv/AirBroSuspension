@@ -1,7 +1,7 @@
 /*
  * CommandParser.c
  *
- *  Created on: 6 жовт. 2018 р.
+ *  Created on: 6 пїЅпїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
@@ -13,30 +13,40 @@
 #define ARRSIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define DELIMITER_CHAR ':'
 
+/* Number of commands */
+#define COMMANDS_NUMBER         (19)
+
+
+/* ------------------------ Command Handlers ------------------------ */
+static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+/* ------------------------------------------------------------------ */
+
+
 //
 // max command size is MAX_COMMAND_LEN = 10 for now.
+// Don't forget to increment COMMANDS_NUMBER during new command adding!!!
 //
-static const CommandInfo CommandsList[] =
+static const CommandInfo CommandsList[COMMANDS_NUMBER] =
 {
-    {CMD_WHEEL_UP,   "up", 2},
-    {CMD_WHEEL_DOWN, "down", 4},
-    {CMD_WHEEL_STOP, "stop", 4},
-    {CMD_WHEEL_AUTO, "auto", 4},
-    {CMD_LEVELS_SAVE_MAX, "lmaxsave", 8},
-    {CMD_LEVELS_SAVE_MIN, "lminsave", 8},
-    {CMD_LEVELS_SAVE, "lsave", 5},
-    {CMD_LEVELS_GET_MAX, "lmaxget", 7},
-    {CMD_LEVELS_GET_MIN, "lminget", 7},
-    {CMD_LEVELS_GET,  "lget", 4},
-    {CMD_LEVELS_SHOW, "lshow", 5},
-    {CMD_MEM_CLEAR, "memclear", 8},
-    {CMD_GET_BATTERY, "bat", 3},
-    {CMD_GET_COMPRESSOR_PRESSURE, "getcompr", 8},
-    {CMD_SET_COMPRESSOR_MAX_PRESSURE, "cmaxsave", 8},
-    {CMD_SET_COMPRESSOR_MIN_PRESSURE, "cminsave", 8},
-    {CMD_GET_COMPRESSOR_MAX_PRESSURE, "cmaxget", 7},
-    {CMD_GET_COMPRESSOR_MIN_PRESSURE, "cminget", 7},
-    {CMD_GET_VERSION, "ver", 3}
+    {CMD_WHEEL_UP,                      "up",           2, NULL},
+    {CMD_WHEEL_DOWN,                    "down",         4, NULL},
+    {CMD_WHEEL_STOP,                    "stop",         4, NULL},
+    {CMD_WHEEL_AUTO,                    "auto",         4, NULL},
+    {CMD_LEVELS_SAVE_MAX,               "lmaxsave",     8, NULL},
+    {CMD_LEVELS_SAVE_MIN,               "lminsave",     8, NULL},
+    {CMD_LEVELS_SAVE,                   "lsave",        5, NULL},
+    {CMD_LEVELS_GET_MAX,                "lmaxget",      7, NULL},
+    {CMD_LEVELS_GET_MIN,                "lminget",      7, NULL},
+    {CMD_LEVELS_GET,                    "lget",         4, NULL},
+    {CMD_LEVELS_SHOW,                   "lshow",        5, NULL},
+    {CMD_MEM_CLEAR,                     "memclear",     8, NULL},
+    {CMD_GET_BATTERY,                   "bat",          3, NULL},
+    {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, NULL},
+    {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, NULL},
+    {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, NULL},
+    {CMD_GET_COMPRESSOR_MAX_PRESSURE,   "cmaxget",      7, NULL},
+    {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, NULL},
+    {CMD_GET_VERSION,                   "ver",          3, getVersionHandler},
 };
 
 
@@ -92,4 +102,36 @@ void parseParams(const char* const strCmd, Command* const retCommand )
             break;
         }
     }
+}
+
+
+bool executeCommand(const Command* command)
+{
+    int i;
+    bool rv = false;
+
+    for (i = 0; i < COMMANDS_NUMBER; i++)
+    {
+        if (command->commandType == CommandsList[i].cmdType)
+        {
+            /* Command was found, run it! */
+            if (CommandsList[i].handler != NULL)
+            {
+                rv = (*CommandsList[i].handler)(command->argv, command->argc);
+            }
+            break;
+        }
+    }
+
+    return rv;
+}
+
+/* ------------------------ Command Handlers ------------------------ */
+static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+//    printSuccessString(VERSION);
+    return true;
 }
