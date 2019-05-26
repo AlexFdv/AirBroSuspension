@@ -13,11 +13,8 @@
 #include "Protocol.h"
 #include "Config.h"
 
-#define ARRSIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define DELIMITER_CHAR ':'
-
-/* Number of commands */
-#define COMMANDS_NUMBER         (20)
+#define ARRSIZE(x)          (sizeof(x) / sizeof((x)[0]))
+#define DELIMITER_CHAR      (':')
 
 
 /* ------------------------ Command Handlers ------------------------ */
@@ -32,7 +29,7 @@ static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 // max command size is MAX_COMMAND_LEN = 10 for now.
 // Don't forget to increment COMMANDS_NUMBER during new command adding!!!
 //
-static const CommandInfo CommandsList[COMMANDS_NUMBER] =
+static const CommandInfo CommandsList[] =
 {
     {CMD_WHEEL_UP,                      "up",           2, NULL},
     {CMD_WHEEL_DOWN,                    "down",         4, NULL},
@@ -54,6 +51,9 @@ static const CommandInfo CommandsList[COMMANDS_NUMBER] =
     {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, NULL},
     {CMD_GET_VERSION,                   "ver",          3, getVersionHandler},
     {CMD_HELP,                          "help",         4, helpHandler},
+
+    /* End of list. Please keep UNKNOWN_COMMAND as the last one */
+    {UNKNOWN_COMMAND,                   "",             0, NULL},
 };
 
 
@@ -114,10 +114,10 @@ void parseParams(const char* const strCmd, Command* const retCommand )
 
 bool executeCommand(const Command* command)
 {
-    int i;
+    int i = 0;
     bool rv = false;
 
-    for (i = 0; i < COMMANDS_NUMBER; i++)
+    while (UNKNOWN_COMMAND != CommandsList[i].cmdType)
     {
         if (command->commandType == CommandsList[i].cmdType)
         {
@@ -128,6 +128,7 @@ bool executeCommand(const Command* command)
             }
             break;
         }
+        i++;
     }
 
     return rv;
@@ -193,11 +194,12 @@ static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
     (void) argv;
     (void) argc;
 
-    int i;
+    int i = 0;
 
-    for (i = 0; i < COMMANDS_NUMBER; i++)
+    while (UNKNOWN_COMMAND != CommandsList[i].cmdType)
     {
         printSuccessString(CommandsList[i].cmdValue);
+        i++;
     }
     printSuccess();
 
