@@ -105,7 +105,7 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     return true;
 }
 
-inline bool getCurrentCompressorPressure(AdcValue_t* const retLevel)
+bool getCompressorPressure(AdcValue_t* const retLevel)
 {
     if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], retLevel, 0))
     {
@@ -208,28 +208,18 @@ void sendToExecuteCommand(Command cmd)
     {
         if (cmd.commandType == CMD_GET_VERSION)
         {
-            printSuccessString(APP_VERSION);
+            executeCommand(&cmd);
         }
 
         if (cmd.commandType == CMD_GET_BATTERY)
         {
-            portLONG batteryVoltage = 0;
-            if (getBatteryVoltage(&batteryVoltage))
-            {
-                printSuccessNumber(batteryVoltage);
-            }
-            else
-                printError(UndefinedErrorCode, "Cannot get battery value");
+            executeCommand(&cmd);
         }
 
         // TODO: remove after moving pressure value to the diagnostic
         if (cmd.commandType == CMD_GET_COMPRESSOR_PRESSURE)
         {
-            AdcValue_t level;
-            if (getCurrentCompressorPressure(&level))
-            {
-                printSuccessNumber(level);
-            }
+            executeCommand(&cmd);
         }
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE ||
@@ -507,7 +497,7 @@ void vMemTask( void *pvParameters )
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE)
         {
             AdcValue_t pressure;
-            if (getCurrentCompressorPressure(&pressure))
+            if (getCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
                     cachedSettings.compressor_preasure_min = (cmd.argc==0)?pressure:cmd.argv[0];
@@ -522,7 +512,7 @@ void vMemTask( void *pvParameters )
         if (cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
         {
             AdcValue_t pressure;
-            if (getCurrentCompressorPressure(&pressure))
+            if (getCompressorPressure(&pressure))
             {
                 GLOBAL_SYNC_START;
                     cachedSettings.compressor_preasure_max = (cmd.argc==0)?pressure:cmd.argv[0];
