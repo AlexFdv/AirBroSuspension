@@ -21,6 +21,7 @@
 
 /* ------------------------ Command Handlers ------------------------ */
 static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 /* ------------------------------------------------------------------ */
 
 
@@ -42,7 +43,7 @@ static const CommandInfo CommandsList[COMMANDS_NUMBER] =
     {CMD_LEVELS_GET,                    "lget",         4, NULL},
     {CMD_LEVELS_SHOW,                   "lshow",        5, NULL},
     {CMD_MEM_CLEAR,                     "memclear",     8, NULL},
-    {CMD_GET_BATTERY,                   "bat",          3, NULL},
+    {CMD_GET_BATTERY,                   "bat",          3, getBatVoltageHandler},
     {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, NULL},
     {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, NULL},
     {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, NULL},
@@ -129,6 +130,28 @@ bool executeCommand(const Command* command)
 }
 
 /* ------------------------ Command Handlers ------------------------ */
+static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    bool rv = false;
+    portLONG batteryVoltage = 0;
+
+    rv = getBatteryVoltage(&batteryVoltage);
+    if (rv)
+    {
+        printSuccessNumber(batteryVoltage);
+    }
+    else
+    {
+        printError(UndefinedErrorCode, "Cannot get battery value");
+    }
+
+    return rv;
+}
+
+
 static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 {
     (void) argv;

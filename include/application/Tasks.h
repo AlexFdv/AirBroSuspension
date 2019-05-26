@@ -22,4 +22,6 @@ void vWheelTask( void *pvParameters );
 
 void commandReceivedCallback(uint8_t* receivedCommand, short length);
 
+bool getBatteryVoltage(long* const retVoltage);
+
 #endif /* INCLUDE_APPLICATION_TASKS_H_ */

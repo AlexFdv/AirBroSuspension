@@ -68,7 +68,7 @@ inline void stopWheel(WheelPinsStruct wheelPins)
 }
 
 
-inline bool getBatteryVoltage(portLONG* const retVoltage)
+inline bool getBatteryVoltage(long* const retVoltage)
 {
     uint16 adcValue = 0;
 
