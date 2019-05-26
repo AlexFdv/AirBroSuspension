@@ -424,82 +424,13 @@ void vMemTask( void *pvParameters )
     for( ;; )
     {
         boolean result = popFromQueue(&memoryCommandsQueue,  &cmd);
-        if (!result)
+        if (result)
+        {
+            executeCommand(&cmd);
+        }
+        else
         {
             printError(MemoryQueueErrorCode, "Could not pop command from the memory queue.");
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_GET)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_SAVE)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_SHOW)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_SAVE_MAX)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_SAVE_MIN)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_GET_MAX)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_LEVELS_GET_MIN)
-        {
-            executeCommand(&cmd);
-            continue;
-        }
-
-        if (cmd.commandType == CMD_MEM_CLEAR)
-        {
-            executeCommand(&cmd);
-            continue;
         }
 
         DUMMY_BREAK;
