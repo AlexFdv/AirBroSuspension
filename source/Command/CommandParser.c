@@ -6,6 +6,7 @@
  */
 
 #include "CommandParser.h"
+#include "Tasks.h"
 #include "string.h"
 #include "stdlib.h"
 #include "StringUtils.h"
@@ -16,12 +17,14 @@
 #define DELIMITER_CHAR ':'
 
 /* Number of commands */
-#define COMMANDS_NUMBER         (19)
+#define COMMANDS_NUMBER         (20)
 
 
 /* ------------------------ Command Handlers ------------------------ */
 static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 /* ------------------------------------------------------------------ */
 
 
@@ -44,12 +47,13 @@ static const CommandInfo CommandsList[COMMANDS_NUMBER] =
     {CMD_LEVELS_SHOW,                   "lshow",        5, NULL},
     {CMD_MEM_CLEAR,                     "memclear",     8, NULL},
     {CMD_GET_BATTERY,                   "bat",          3, getBatVoltageHandler},
-    {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, NULL},
+    {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, getComprPressureHandler},
     {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, NULL},
     {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, NULL},
     {CMD_GET_COMPRESSOR_MAX_PRESSURE,   "cmaxget",      7, NULL},
     {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, NULL},
     {CMD_GET_VERSION,                   "ver",          3, getVersionHandler},
+    {CMD_HELP,                          "help",         4, helpHandler},
 };
 
 
@@ -158,5 +162,44 @@ static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
     (void) argc;
 
     printSuccessString(APP_VERSION);
+    return true;
+}
+
+
+static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    bool rv = false;
+    AdcValue_t level;
+
+    rv = getCompressorPressure(&level);
+    if (rv)
+    {
+        printSuccessNumber(level);
+    }
+    else
+    {
+        printError(UndefinedErrorCode, "Cannot get compressor pressure");
+    }
+
+    return rv;
+}
+
+
+static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    int i;
+
+    for (i = 0; i < COMMANDS_NUMBER; i++)
+    {
+        printSuccessString(CommandsList[i].cmdValue);
+    }
+    printSuccess();
+
     return true;
 }

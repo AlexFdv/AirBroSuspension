@@ -216,6 +216,11 @@ void sendToExecuteCommand(Command cmd)
             executeCommand(&cmd);
         }
 
+        if (cmd.commandType == CMD_HELP)
+        {
+            executeCommand(&cmd);
+        }
+
         // TODO: remove after moving pressure value to the diagnostic
         if (cmd.commandType == CMD_GET_COMPRESSOR_PRESSURE)
         {
