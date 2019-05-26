@@ -90,7 +90,8 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     return readFromQueueWithTimeout(&adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
 }
 
-inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
+
+bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
 {
     portSHORT i = 0;
     for (; i < WHEELS_COUNT; ++i)
@@ -104,6 +105,32 @@ inline bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
 
     return true;
 }
+
+
+bool setCachedWheelLevel(uint8_t levelNumber, LevelValues values)
+{
+    bool rv = false;
+
+    if (levelNumber < LEVELS_COUNT) {
+        cachedLevels[levelNumber] = values;
+        rv = true;
+    }
+
+    return rv;
+}
+
+
+const LevelValues* getCachedWheelLevels(void)
+{
+    return cachedLevels;
+}
+
+
+Settings* getSettings(void)
+{
+    return &cachedSettings;
+}
+
 
 bool getCompressorPressure(AdcValue_t* const retLevel)
 {
@@ -405,97 +432,31 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_LEVELS_GET)
         {
-            portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            if (levelNumber < LEVELS_COUNT && cmd.argc != 0)
-            {
-                printSuccessLevels(&(cachedLevels[levelNumber]));
-            }
-            else
-            {
-                printError(WrongLevelSpecifiedErrorCode, "Wrong level number specified");
-            }
-
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_SAVE)
         {
-            portSHORT levelNumber = (cmd.argc != 0) ? cmd.argv[0] : 0;
-            if (levelNumber >= LEVELS_COUNT || cmd.argc == 0)
-            {
-                printError(WrongLevelSpecifiedErrorCode, "Wrong level number specified");
-                continue;
-            }
-
-            bool useDummyValue = (cmd.argc == 2);
-            LevelValues currLevels;
-
-            if (useDummyValue)
-            {
-                portSHORT i = 0;
-                for (; i< WHEELS_COUNT;++i)
-                    currLevels.wheels[i] = cmd.argv[1];
-            }
-            else if (!getCurrentWheelsLevelsValues(&currLevels))
-            {
-                continue;
-            }
-
-            GLOBAL_SYNC_START;
-                cachedLevels[levelNumber] = currLevels;
-                writeLevels((void*)&cachedLevels);
-            GLOBAL_SYNC_END;
-
-            printSuccessLevels(&currLevels);
-
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_SHOW)
         {
-            LevelValues currLevels;
-            if (getCurrentWheelsLevelsValues(&currLevels))
-            {
-                printSuccessLevels(&currLevels);
-            }
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_SAVE_MAX)
         {
-            LevelValues currLevel;
-            if (getCurrentWheelsLevelsValues(&currLevel))
-            {
-                GLOBAL_SYNC_START;
-                    portSHORT i = 0;
-                    for (;i<WHEELS_COUNT; ++i)
-                    {
-                        cachedSettings.levels_values_max.wheels[i] = (cmd.argc==0)?currLevel.wheels[i]:cmd.argv[0];
-                    }
-                    writeSettings(&cachedSettings);
-                GLOBAL_SYNC_END;
-
-                printSuccessLevels(&cachedSettings.levels_values_max);
-            }
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_SAVE_MIN)
         {
-            LevelValues currLevel;
-            if (getCurrentWheelsLevelsValues(&currLevel))
-            {
-                GLOBAL_SYNC_START;
-                    portSHORT i = 0;
-                    for (; i < WHEELS_COUNT; ++i)
-                    {
-                        cachedSettings.levels_values_min.wheels[i] = (cmd.argc==0)?currLevel.wheels[i]:cmd.argv[0];
-                    }
-                    writeSettings(&cachedSettings);
-                GLOBAL_SYNC_END;
-
-                printSuccessLevels(&cachedSettings.levels_values_min);
-            }
+            executeCommand(&cmd);
             continue;
         }
 
@@ -543,19 +504,20 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_LEVELS_GET_MAX)
         {
-            printSuccessLevels(&(cachedSettings.levels_values_max));
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_LEVELS_GET_MIN)
         {
-            printSuccessLevels(&(cachedSettings.levels_values_min));
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_MEM_CLEAR)
         {
-            formatFEE();
+            executeCommand(&cmd);
+            continue;
         }
 
         DUMMY_BREAK;

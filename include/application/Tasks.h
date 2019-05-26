@@ -12,6 +12,8 @@
 #include <stdint.h>
 
 #include "ADCController.h"
+#include "Levels.h"
+#include "Settings.h"
 
 bool tasks_init(void);
 
@@ -27,5 +29,9 @@ void commandReceivedCallback(uint8_t* receivedCommand, short length);
 //@todo: separate these functions to another unit
 bool getBatteryVoltage(long* const retVoltage);
 bool getCompressorPressure(AdcValue_t* const retLevel);
+bool getCurrentWheelsLevelsValues(LevelValues* const retLevels);
+bool setCachedWheelLevel(uint8_t levelNumber, LevelValues values);
+const LevelValues* getCachedWheelLevels(void);
+Settings* getSettings(void);
 
 #endif /* INCLUDE_APPLICATION_TASKS_H_ */

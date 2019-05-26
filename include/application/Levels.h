@@ -1,7 +1,7 @@
 /*
  * Levels.h
  *
- *  Created on: 19 лист. 2017 р.
+ *  Created on: 19 пїЅпїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: Alex
  */
 
@@ -15,5 +15,12 @@ typedef struct _LevelValues
 {
     AdcValue_t wheels[WHEELS_COUNT];
 } LevelValues;
+
+
+typedef enum
+{
+    LevelMin,
+    LevelMax
+} LEVEL_TYPE;
 
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

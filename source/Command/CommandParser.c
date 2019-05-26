@@ -10,8 +10,10 @@
 #include "string.h"
 #include "stdlib.h"
 #include "StringUtils.h"
+#include "FEEController.h"
 #include "Protocol.h"
 #include "Config.h"
+#include "../RtosWrapper/Rtos.h"
 
 #define ARRSIZE(x)          (sizeof(x) / sizeof((x)[0]))
 #define DELIMITER_CHAR      (':')
@@ -22,6 +24,14 @@ static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
 static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsGetHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsShowHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsSaveMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsGetMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool levelsGetMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 /* ------------------------------------------------------------------ */
 
 
@@ -35,14 +45,14 @@ static const CommandInfo CommandsList[] =
     {CMD_WHEEL_DOWN,                    "down",         4, NULL},
     {CMD_WHEEL_STOP,                    "stop",         4, NULL},
     {CMD_WHEEL_AUTO,                    "auto",         4, NULL},
-    {CMD_LEVELS_SAVE_MAX,               "lmaxsave",     8, NULL},
-    {CMD_LEVELS_SAVE_MIN,               "lminsave",     8, NULL},
-    {CMD_LEVELS_SAVE,                   "lsave",        5, NULL},
-    {CMD_LEVELS_GET_MAX,                "lmaxget",      7, NULL},
-    {CMD_LEVELS_GET_MIN,                "lminget",      7, NULL},
-    {CMD_LEVELS_GET,                    "lget",         4, NULL},
-    {CMD_LEVELS_SHOW,                   "lshow",        5, NULL},
-    {CMD_MEM_CLEAR,                     "memclear",     8, NULL},
+    {CMD_LEVELS_SAVE_MAX,               "lmaxsave",     8, levelsSaveMaxHandler},
+    {CMD_LEVELS_SAVE_MIN,               "lminsave",     8, levelsSaveMinHandler},
+    {CMD_LEVELS_SAVE,                   "lsave",        5, levelsSaveHandler},
+    {CMD_LEVELS_GET_MAX,                "lmaxget",      7, levelsGetMaxHandler},
+    {CMD_LEVELS_GET_MIN,                "lminget",      7, levelsGetMinHandler},
+    {CMD_LEVELS_GET,                    "lget",         4, levelsGetHandler},
+    {CMD_LEVELS_SHOW,                   "lshow",        5, levelsShowHandler},
+    {CMD_MEM_CLEAR,                     "memclear",     8, memClearHandler},
     {CMD_GET_BATTERY,                   "bat",          3, getBatVoltageHandler},
     {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, getComprPressureHandler},
     {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, NULL},
@@ -73,7 +83,7 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
     for (; i<ARRSIZE(CommandsList); ++i)
     {
         // TODO: Compare until ':'
-        if (0 == strncmp(command+1, CommandsList[i].cmdValue, CommandsList[i].cmdLen))
+        if (0 == strncmp(command+1, CommandsList[i].cmdValue, CommandsList[i].cmdLen)) //@todo: use strlen instead of CommandsList[i].cmdLen?
         {
             parsedCommand.commandType = CommandsList[i].cmdType;
             parseParams(command, &parsedCommand);
@@ -205,3 +215,138 @@ static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 
     return true;
 }
+
+
+static bool levelsGetHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    portSHORT levelNumber = (argc != 0) ? argv[0] : 0;
+    if (levelNumber < LEVELS_COUNT && argc != 0)
+    {
+        printSuccessLevels(&(getCachedWheelLevels()[levelNumber]));
+    }
+    else
+    {
+        printError(WrongLevelSpecifiedErrorCode, "Wrong level number specified");
+    }
+
+    return true;
+}
+
+
+static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    short levelNumber = (argc != 0) ? argv[0] : 0;
+    if (levelNumber >= LEVELS_COUNT || argc == 0)
+    {
+        printError(WrongLevelSpecifiedErrorCode, "Wrong level number specified");
+        return false;
+    }
+
+    bool useDummyValue = (argc == 2);
+    LevelValues currLevels;
+
+    if (useDummyValue)
+    {
+        short i;
+        for (i = 0; i< WHEELS_COUNT;++i)
+        {
+            currLevels.wheels[i] = argv[1];
+        }
+    }
+    else if (!getCurrentWheelsLevelsValues(&currLevels))
+    {
+        return false;
+    }
+
+    GLOBAL_SYNC_START;
+        setCachedWheelLevel(levelNumber, currLevels);
+        writeLevels((void*)getCachedWheelLevels());
+    GLOBAL_SYNC_END;
+
+    printSuccessLevels(&currLevels);
+
+    return true;
+}
+
+
+static bool levelsShowHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    LevelValues currLevels;
+    if (getCurrentWheelsLevelsValues(&currLevels))
+    {
+        printSuccessLevels(&currLevels);
+    }
+
+    return true;
+}
+
+
+static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc, LEVEL_TYPE type)
+{
+    LevelValues currLevel;
+    if (getCurrentWheelsLevelsValues(&currLevel))
+    {
+        GLOBAL_SYNC_START;
+            uint8_t i;
+            LevelValues *levelValues = (type == LevelMin) ? &(getSettings()->levels_values_min) : &(getSettings()->levels_values_max);
+            for (i = 0; i < WHEELS_COUNT; ++i)
+            {
+                levelValues->wheels[i] = (argc==0)?currLevel.wheels[i]:argv[0];
+            }
+            writeSettings(getSettings());
+        GLOBAL_SYNC_END;
+
+        printSuccessLevels(&getSettings()->levels_values_min);
+    }
+
+    return true;
+}
+
+
+static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    return saveLevels(argv, argc, LevelMin);
+}
+
+
+static bool levelsSaveMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    return saveLevels(argv, argc, LevelMax);
+}
+
+
+static bool levelsGetMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    printSuccessLevels(&(getSettings()->levels_values_min));
+
+    return true;
+}
+
+
+static bool levelsGetMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    printSuccessLevels(&(getSettings()->levels_values_max));
+
+    return true;
+}
+
+
+static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    formatFEE();
+
+    return true;
+}
+
