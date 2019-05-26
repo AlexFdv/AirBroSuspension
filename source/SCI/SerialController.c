@@ -13,10 +13,8 @@
 #include <application/SerialController.h>
 
 
-//#define SCILIN_REG scilinREG    // output to debug terminal
-//#define SCI_REG sciREG          // output via bluetooth
-#define SCILIN_REG sciREG    // output to debug terminal
-#define SCI_REG scilinREG          // output via bluetooth
+#define SCILIN_REG scilinREG    // output to debug terminal
+#define SCI_REG sciREG          // output via bluetooth
 
 Callback dataReceivedCallback;
 
