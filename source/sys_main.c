@@ -94,10 +94,6 @@
 
 /* USER CODE BEGIN (2) */
 
-// ----------------------------- USE SIMPLE LOGIC BY DEFAULT NOW -----------------------------
-#define SIMPLE_WHEEL_LOGIC
-// -------------------------------------------------------------------------------------------
-
 
 #pragma SWI_ALIAS(swiSwitchToMode, 1)
 
