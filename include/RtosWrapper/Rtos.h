@@ -1,7 +1,7 @@
 /*
  * Rtos.h
  *
- *  Created on: 18 вер. 2018 р.
+ *  Created on: 18 пїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
@@ -14,6 +14,10 @@
 #include "os_timer.h"
 
 #define MS_TO_TICKS(x) ((x)/portTICK_RATE_MS)
+
+#define GLOBAL_SYNC_START suspendAllTasks()
+#define GLOBAL_SYNC_END resumeAllTasks()
+
 
 typedef TimerCallbackFunction_t TimerCallbackFunction;
 

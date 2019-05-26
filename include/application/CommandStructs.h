@@ -1,7 +1,7 @@
 /*
  * WheelStructs.h
  *
- *  Created on: 19 серп. 2018 р.
+ *  Created on: 19 пїЅпїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
@@ -53,24 +53,5 @@ typedef struct
     portCHAR argc;
 } Command;
 
-typedef struct
-{
-    WHEEL_IDX wheel;
-    portCHAR upPin;
-    portCHAR downPin;
-    portCHAR upPinStatus;
-    portCHAR downPinStatus;
-} WheelPinsStruct;
-
-typedef struct
-{
-    bool isWorking;
-    WHEEL_IDX wheelNumber;
-    portSHORT timeoutSec;
-    AdcValue_t levelLimitValue;
-    WheelPinsStruct wheelPins;
-    COMMAND_TYPE cmdType;
-    TickType_t startTime;
-} WheelStatusStruct;
 
 #endif /* INCLUDE_APPLICATION_COMMANDSTRUCTS_H_ */

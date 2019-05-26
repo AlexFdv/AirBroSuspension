@@ -24,10 +24,10 @@ typedef struct AdcDataValues
 typedef enum
 {
     /* First 4 for wheels */
-    FL_WHEEL_IDX = FL_WHEEL,  // front left
-    FR_WHEEL_IDX = FR_WHEEL,  // front right
-    BL_WHEEL_IDX = BL_WHEEL,  // back left
-    BR_WHEEL_IDX = BR_WHEEL,   // back right
+    FL_WHEEL_IDX = 0,  // front left
+    FR_WHEEL_IDX = 1,  // front right
+    BL_WHEEL_IDX = 2,  // back left
+    BR_WHEEL_IDX = 3,   // back right
 
     /* other values */
     COMPRESSOR_IDX = 4,

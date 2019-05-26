@@ -22,6 +22,14 @@ inline void printLevels(const LevelValues* const levels);
 
 /*========================= Global functions =========================*/
 
+bool protocol_init(void)
+{
+    uartMutexSemaphore = createMutexSemaphore();
+
+    return (uartMutexSemaphore.handle != NULL);
+}
+
+
 void printError(int code, const char* text)
 {
     takeSemaphore(&uartMutexSemaphore);
@@ -76,6 +84,10 @@ void printSuccessLevels(const LevelValues* const levels)
 }
 
 
+void sendDiagnosticData(const void *data, size_t len)
+{
+    sciSendDataLin((uint8*)data, len);
+}
 /*================= Static functions implementations =================*/
 
 inline void printLevels(const LevelValues* const levels)
@@ -87,4 +99,3 @@ inline void printLevels(const LevelValues* const levels)
         printText(":");
     }
 }
-

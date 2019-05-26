@@ -24,13 +24,5 @@
 #define TASK_DEFAULT_PRIORITY 3
 #define TASK_HIGH_PRIORITY 3
 
-// it is better don't change the values, or find usages of it.
-typedef enum
-{
-    FL_WHEEL = 0,  // front left
-    FR_WHEEL = 1,  // front right
-    BL_WHEEL = 2,  // back left
-    BR_WHEEL = 3   // back right
-} WHEEL_IDX;
 
 #endif /* SOURCE_INCLUDES_CONSTANTSCOMMON_H_ */

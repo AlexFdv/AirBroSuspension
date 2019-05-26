@@ -1,7 +1,7 @@
 /*
  * RtosQueue.h
  *
- *  Created on: 18 вер. 2018 р.
+ *  Created on: 18 пїЅпїЅпїЅ. 2018 пїЅ.
  *      Author: Alex
  */
 
@@ -17,7 +17,7 @@
 typedef struct
 {
     xQueueHandle handle;
-} Queue;
+} Queue; //@todo: replace with typedef??
 
 void createQueue(const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, Queue* out);
 void cleanQueue(const Queue* const queue);
