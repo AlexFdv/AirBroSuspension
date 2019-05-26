@@ -462,43 +462,25 @@ void vMemTask( void *pvParameters )
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE)
         {
-            AdcValue_t pressure;
-            if (getCompressorPressure(&pressure))
-            {
-                GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_min = (cmd.argc==0)?pressure:cmd.argv[0];
-                    writeSettings(&cachedSettings);
-                GLOBAL_SYNC_END;
-
-                printSuccessNumber(cachedSettings.compressor_preasure_min);
-            }
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE)
         {
-            AdcValue_t pressure;
-            if (getCompressorPressure(&pressure))
-            {
-                GLOBAL_SYNC_START;
-                    cachedSettings.compressor_preasure_max = (cmd.argc==0)?pressure:cmd.argv[0];
-                    writeSettings(&cachedSettings);
-                GLOBAL_SYNC_END;
-
-                printSuccessNumber(cachedSettings.compressor_preasure_max);
-            }
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
         {
-            printSuccessNumber(cachedSettings.compressor_preasure_max);
+            executeCommand(&cmd);
             continue;
         }
 
         if (cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE)
         {
-            printSuccessNumber(cachedSettings.compressor_preasure_min);
+            executeCommand(&cmd);
             continue;
         }
 

@@ -17,10 +17,4 @@ typedef struct _LevelValues
 } LevelValues;
 
 
-typedef enum
-{
-    LevelMin,
-    LevelMax
-} LEVEL_TYPE;
-
 #endif /* SOURCE_INCLUDES_LEVELS_H_ */

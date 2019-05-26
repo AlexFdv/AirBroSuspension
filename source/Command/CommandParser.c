@@ -32,7 +32,18 @@ static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portC
 static bool levelsGetMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 static bool levelsGetMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
 static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool getComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool getComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool setComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool setComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+
 /* ------------------------------------------------------------------ */
+
+typedef enum
+{
+    SettingMin,
+    SettingMax
+} SETTING_TYPE;
 
 
 //
@@ -55,10 +66,10 @@ static const CommandInfo CommandsList[] =
     {CMD_MEM_CLEAR,                     "memclear",     8, memClearHandler},
     {CMD_GET_BATTERY,                   "bat",          3, getBatVoltageHandler},
     {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, getComprPressureHandler},
-    {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, NULL},
-    {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, NULL},
-    {CMD_GET_COMPRESSOR_MAX_PRESSURE,   "cmaxget",      7, NULL},
-    {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, NULL},
+    {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, setComprMinPressureHandler},
+    {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, setComprMaxPressureHandler},
+    {CMD_GET_COMPRESSOR_MAX_PRESSURE,   "cmaxget",      7, getComprMaxPressureHandler},
+    {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, getComprMinPressureHandler},
     {CMD_GET_VERSION,                   "ver",          3, getVersionHandler},
     {CMD_HELP,                          "help",         4, helpHandler},
 
@@ -284,14 +295,14 @@ static bool levelsShowHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
 }
 
 
-static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc, LEVEL_TYPE type)
+static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc, SETTING_TYPE type)
 {
     LevelValues currLevel;
     if (getCurrentWheelsLevelsValues(&currLevel))
     {
         GLOBAL_SYNC_START;
             uint8_t i;
-            LevelValues *levelValues = (type == LevelMin) ? &(getSettings()->levels_values_min) : &(getSettings()->levels_values_max);
+            LevelValues *levelValues = (type == SettingMin) ? &(getSettings()->levels_values_min) : &(getSettings()->levels_values_max);
             for (i = 0; i < WHEELS_COUNT; ++i)
             {
                 levelValues->wheels[i] = (argc==0)?currLevel.wheels[i]:argv[0];
@@ -308,13 +319,13 @@ static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
 
 static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 {
-    return saveLevels(argv, argc, LevelMin);
+    return saveLevels(argv, argc, SettingMin);
 }
 
 
 static bool levelsSaveMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 {
-    return saveLevels(argv, argc, LevelMax);
+    return saveLevels(argv, argc, SettingMax);
 }
 
 
@@ -350,3 +361,53 @@ static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR a
     return true;
 }
 
+
+static bool getComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    printSuccessNumber(getSettings()->compressor_preasure_max);
+
+    return true;
+}
+
+
+static bool getComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    (void) argv;
+    (void) argc;
+
+    printSuccessNumber(getSettings()->compressor_preasure_min);
+
+    return true;
+}
+
+
+inline static bool setComprPressure(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc, SETTING_TYPE type)
+{
+    AdcValue_t pressure;
+    uint16_t *value = (type == SettingMin) ? &getSettings()->compressor_preasure_min : &getSettings()->compressor_preasure_max;
+    if (getCompressorPressure(&pressure))
+    {
+        GLOBAL_SYNC_START;
+            *value = (argc==0) ? pressure : argv[0];
+            writeSettings(getSettings());
+        GLOBAL_SYNC_END;
+
+        printSuccessNumber(*value);
+    }
+
+    return true;
+}
+
+static bool setComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    return setComprPressure(argv, argc, SettingMin);
+}
+
+
+static bool setComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+{
+    return setComprPressure(argv, argc, SettingMax);
+}
