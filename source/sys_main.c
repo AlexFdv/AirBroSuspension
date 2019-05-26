@@ -52,59 +52,40 @@
 #include "sys_common.h"
 
 /* USER CODE BEGIN (1) */
-#include "stdlib.h"
-#include "stdio.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 #include "gio.h"
 #include "het.h"
 #include "sci.h"
 #include "adc.h"
 
-#include <application/Diagnostic.h>
-#include <application/ADCController.h>
-#include <application/FEEController.h>
-#include <application/HetPinsController.h>
-#include <application/SerialController.h>
-#include <application/Protocol.h>
-#include <application/Tasks.h>
-#include <application/Wheels.h>
-
+#include "application/Tasks.h"
+#include "application/HetConstants.h"
+#include "application/ConstantsCommon.h"
+#include "application/Wheels.h"
+#include "application/HetPinsController.h"
+#include "application/Protocol.h"
+#include "application/SerialController.h"
+//
 #include "RtosWrapper/Rtos.h"
-#include "RtosWrapper/RtosSemaphore.h"
-#include "RtosWrapper/RtosQueue.h"
-
-
-#include <application/Settings.h>
-#include <application/Levels.h>
-#include <application/HetConstants.h>
-#include <application/ConstantsCommon.h>
-#include <application/CommandStructs.h>
-#include <application/CommandParser.h>
-#include <application/Config.h>
-
 
 /* USER CODE END */
 
-/** @fn void main(void)
-*   @brief Application main function
-*   @note This function is empty by default.
-*
-*   This function is called after startup.
-*   The user can use this function to implement the application.
-*/
+
 
 /* USER CODE BEGIN (2) */
-
 
 void vTimerCallbackFunction(xTimerHandle xTimer)
 {
     togglePin(LED_1_HET_PIN);
 }
 
+
 void criticalErrorHandler(void)
 {
     //@todo: go to hardware error mode
-    printText("#ERROR:Initialization error.\n");
+    printError(UndefinedErrorCode, "Initialization error.");
     while(1)
     {
         if (0){
@@ -113,10 +94,20 @@ void criticalErrorHandler(void)
     }
 }
 
+
+
 /* USER CODE END */
 
 
 
+/** @fn int main(void)
+*   @brief Application main function
+*   @note This function is empty by default.
+*
+*   This function is called after startup.
+*   The user can use this function to implement the application.
+*   @return return code
+*/
 int main(void)
 {
 /* USER CODE BEGIN (3) */
@@ -198,7 +189,7 @@ int main(void)
         criticalErrorHandler();
     }
 
-    printText("Controller started\r\n");
+    printSuccessString("Controller started");
     vTaskStartScheduler();
 
     /* Should not be executed */
