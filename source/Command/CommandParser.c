@@ -9,6 +9,8 @@
 #include "string.h"
 #include "stdlib.h"
 #include "StringUtils.h"
+#include "Protocol.h"
+#include "Config.h"
 
 #define ARRSIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define DELIMITER_CHAR ':'
@@ -132,6 +134,6 @@ static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
     (void) argv;
     (void) argc;
 
-//    printSuccessString(VERSION);
+    printSuccessString(APP_VERSION);
     return true;
 }
