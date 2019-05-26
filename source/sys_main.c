@@ -46,8 +46,6 @@
 
 #define DUMMY_BREAK if (0) break
 
-#define VERSION "0.0.3"
-
 /* USER CODE END */
 
 /* Include Files */
@@ -68,6 +66,7 @@
 #include <application/FEEController.h>
 #include <application/HetPinsController.h>
 #include <application/SerialController.h>
+#include <application/Protocol.h>
 
 #include "RtosWrapper/Rtos.h"
 #include "RtosWrapper/RtosSemaphore.h"
@@ -80,6 +79,7 @@
 #include <application/ConstantsCommon.h>
 #include <application/CommandStructs.h>
 #include <application/CommandParser.h>
+#include <application/Config.h>
 
 
 /* USER CODE END */
@@ -177,70 +177,6 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
-inline void printLevels(const LevelValues* const levels)
-{
-    portSHORT i = 0;
-    for (; i < WHEELS_COUNT; ++i)
-    {
-        printNumber(levels->wheels[i]);
-        printText(":");
-    }
-}
-
-
-inline void printError(int code, const portCHAR* text)
-{
-    takeSemaphore(&uartMutexSemaphore);
-
-    printText("#ERROR:");
-    printNumber(code);
-    printText(":");
-    printText(text);
-    printText("\n");
-
-    giveSemaphore(&uartMutexSemaphore);
-}
-
-inline void printSuccess()
-{
-    takeSemaphore(&uartMutexSemaphore);
-    printText("#OK\n");
-    giveSemaphore(&uartMutexSemaphore);
-}
-
-inline void printSuccessString(const portCHAR* text)
-{
-    takeSemaphore(&uartMutexSemaphore);
-
-    printText("#OK:");
-    printText(text);
-    printText("\n");
-
-    giveSemaphore(&uartMutexSemaphore);
-}
-
-inline void printSuccessNumber(const portLONG number)
-{
-    takeSemaphore(&uartMutexSemaphore);
-
-    printText("#OK:");
-    printNumber(number);
-    printText("\n");
-
-    giveSemaphore(&uartMutexSemaphore);
-}
-
-inline void printSuccessLevels(const LevelValues* const levels)
-{
-    takeSemaphore(&uartMutexSemaphore);
-
-    printText("#OK:");
-    printLevels(levels);
-    printText("\n");
-
-    giveSemaphore(&uartMutexSemaphore);
-}
-
 
 inline bool getBatteryVoltage(portLONG* const retVoltage)
 {
@@ -332,7 +268,7 @@ void sendToExecuteCommand(Command cmd)
     {
         if (cmd.commandType == CMD_GET_VERSION)
         {
-            printSuccessString(VERSION);
+            printSuccessString(APP_VERSION);
         }
 
         if (cmd.commandType == CMD_GET_BATTERY)

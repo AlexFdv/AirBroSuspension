@@ -8,6 +8,9 @@
 #ifndef SOURCE_INCLUDES_SERIALCONTROLLER_H_
 #define SOURCE_INCLUDES_SERIALCONTROLLER_H_
 
+#include <string.h>
+#include <stdlib.h>
+
 #include "os_portmacro.h"
 
 typedef void (*Callback)(uint8* data, portSHORT length);
