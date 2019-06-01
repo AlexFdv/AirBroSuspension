@@ -66,8 +66,8 @@ static const CommandInfo CommandsList[] =
     {CMD_MEM_CLEAR,                     "memclear",     8, memClearHandler},
     {CMD_GET_BATTERY,                   "bat",          3, getBatVoltageHandler},
     {CMD_GET_COMPRESSOR_PRESSURE,       "getcompr",     8, getComprPressureHandler},
-    {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, setComprMinPressureHandler},
-    {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, setComprMaxPressureHandler},
+    {CMD_SET_COMPRESSOR_MAX_PRESSURE,   "cmaxsave",     8, setComprMaxPressureHandler},
+    {CMD_SET_COMPRESSOR_MIN_PRESSURE,   "cminsave",     8, setComprMinPressureHandler},
     {CMD_GET_COMPRESSOR_MAX_PRESSURE,   "cmaxget",      7, getComprMaxPressureHandler},
     {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7, getComprMinPressureHandler},
     {CMD_GET_VERSION,                   "ver",          3, getVersionHandler},
@@ -310,7 +310,7 @@ static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
             writeSettings(getSettings());
         GLOBAL_SYNC_END;
 
-        printSuccessLevels(&getSettings()->levels_values_min);
+        printSuccessLevels(levelValues);
     }
 
     return true;
