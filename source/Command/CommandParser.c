@@ -47,8 +47,7 @@ typedef enum
 
 
 //
-// max command size is MAX_COMMAND_LEN = 10 for now.
-// Don't forget to increment COMMANDS_NUMBER during new command adding!!!
+// max command lengh is MAX_COMMAND_LEN
 //
 static const CommandInfo CommandsList[] =
 {
@@ -76,7 +75,6 @@ static const CommandInfo CommandsList[] =
     /* End of list. Please keep UNKNOWN_COMMAND as the last one */
     {UNKNOWN_COMMAND,                   "",             0, NULL},
 };
-
 
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 {

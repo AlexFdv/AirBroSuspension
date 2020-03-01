@@ -9,6 +9,7 @@
 #include "os_task.h"
 #include <stdlib.h>
 
+// TODO: return bool: handle != 0
 void createQueue(const UBaseType_t uxQueueLength, const UBaseType_t uxItemSize, Queue* out)
 {
     out->handle = xQueueCreate(uxQueueLength, uxItemSize);

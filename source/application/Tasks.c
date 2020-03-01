@@ -32,6 +32,7 @@ static Queue commandsQueue;
 static Queue memoryCommandsQueue;
 static Queue wheelsCommandsQueues[WHEELS_COUNT];
 static Queue adcValuesQueues[ADC_FIFO_SIZE];    // adc values have specific order, see ADCController.h(.c)
+
 #ifndef SIMPLE_WHEEL_LOGIC
 static Queue adcAverageQueue;
 #endif
@@ -67,7 +68,6 @@ inline void stopWheel(WheelPinsStruct wheelPins)
     closePin(wheelPins.downPin);
 }
 
-
 inline bool getBatteryVoltage(long* const retVoltage)
 {
     uint16 adcValue = 0;
@@ -90,7 +90,6 @@ inline bool getWheelLevelValue(const portSHORT wheelNumber, uint16 * const retLe
     return readFromQueueWithTimeout(&adcValuesQueues[wheelNumber], retLevel, MS_TO_TICKS(2000));
 }
 
-
 bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
 {
     portSHORT i = 0;
@@ -106,7 +105,6 @@ bool getCurrentWheelsLevelsValues(LevelValues* const retLevels)
     return true;
 }
 
-
 bool setCachedWheelLevel(uint8_t levelNumber, LevelValues values)
 {
     bool rv = false;
@@ -119,18 +117,15 @@ bool setCachedWheelLevel(uint8_t levelNumber, LevelValues values)
     return rv;
 }
 
-
 const LevelValues* getCachedWheelLevels(void)
 {
     return cachedLevels;
 }
 
-
 Settings* getSettings(void)
 {
     return &cachedSettings;
 }
-
 
 bool getCompressorPressure(AdcValue_t* const retLevel)
 {
@@ -142,8 +137,6 @@ bool getCompressorPressure(AdcValue_t* const retLevel)
     return true;
 }
 
-
-// TODO: move to separate file as strategy
 void executeWheelLogic(WheelStatusStruct* wheelStatus)
 {
     /*
@@ -259,10 +252,22 @@ void sendToExecuteCommand(Command cmd)
             cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE ||
             cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
         {
+            // send to execution inside vMemTask task
             if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
             {
                 printError(MemoryQueueErrorCode, "Could not add memory command to the queue (it is full).");
             }
+        }
+    }
+
+    // send to execution inside vMemTask task
+    if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE)
+    {
+        // add command to the memory task queue: clear, save, print levels.
+        // if arguments is empty, then default cell number is 0 (see vMemTask for details).
+        if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*)&cmd, 0))
+        {
+            printError(MemoryQueueErrorCode, "Could not add memory command to the queue (it is full).");
         }
     }
 
@@ -332,17 +337,7 @@ void sendToExecuteCommand(Command cmd)
         }
     }
 
-    if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE)
-    {
-        // add command to the memory task queue: clear, save, print levels.
-        // if arguments is empty, then default cell number is 0 (see vMemTask for details).
-        if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*)&cmd, 0))
-        {
-            printError(MemoryQueueErrorCode, "Could not add memory command to the queue (it is full).");
-        }
-    }
 }
-
 
 inline void initializeWheelStatus(WheelStatusStruct* wheelStatus, Command* cmd)
 {
@@ -376,12 +371,10 @@ inline void resetWheelStatus(WheelStatusStruct* status)
     status->cmdType = UNKNOWN_COMMAND;
 }
 
-
 void commandReceivedCallback(uint8_t* receivedCommand, short length)
 {
     sendToQueueFromISR(&commandsQueue, receivedCommand);
 }
-
 
 /*=================================================*/
 bool tasks_init(void)
@@ -408,7 +401,6 @@ bool tasks_init(void)
 
     return protocol_init();
 }
-
 
 void vMemTask( void *pvParameters )
 {
@@ -439,13 +431,11 @@ void vMemTask( void *pvParameters )
     deleteTask();
 }
 
-
 /*
  * ADCUpdaterTask always tries to update ADC values by getADCValues.
  * A task pushes to queue an updated values.
  * Not sure that there is needed some delay. Anyway we should test it.
  * */
-
 void vADCUpdaterTask( void *pvParameters )
 {
     AdcDataValues adc_data;
@@ -485,7 +475,6 @@ void vADCUpdaterTask( void *pvParameters )
 
     deleteTask();
 }
-
 
 void vTelemetryTask( void *pvParameters )
 {
@@ -537,11 +526,9 @@ void vTelemetryTask( void *pvParameters )
     deleteTask();
 }
 
-
 void vCompressorTask( void *pvParameters )
 {
-    // default value 2 seconds
-    short compressorTimeoutSec = 3;
+    short compressorDefaultTimeoutSec = 3;
     bool isWorking = false;
     AdcValue_t levelValue = 0;
 
@@ -549,7 +536,7 @@ void vCompressorTask( void *pvParameters )
     {
         // time delay before each check if compressor is not working.
         if (!isWorking)
-            delayTask(MS_TO_TICKS(compressorTimeoutSec * 1000));
+            delayTask(MS_TO_TICKS(compressorDefaultTimeoutSec * 1000));
 
         if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], &levelValue, 0))
         {
@@ -573,7 +560,6 @@ void vCompressorTask( void *pvParameters )
 
     deleteTask();
 }
-
 
 void vWheelTask( void *pvParameters )
 {
@@ -612,7 +598,7 @@ void vWheelTask( void *pvParameters )
             if (cmd.commandType == UNKNOWN_COMMAND)
             {
                 printError(UnknownCommandErrorCode, "Unknown command received in wheel task");
-                continue; //loop
+                continue; // loop
             }
         }
 
@@ -642,7 +628,6 @@ void vWheelTask( void *pvParameters )
 
     deleteTask();
 }
-
 
 void vCommandHandlerTask( void *pvParameters )
 {
