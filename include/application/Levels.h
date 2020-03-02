@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_LEVELS_H_
-#define SOURCE_INCLUDES_LEVELS_H_
+#ifndef _APS_LEVELS_H_
+#define _APS_LEVELS_H_
 
 #include "ConstantsCommon.h"
 #include "ADCController.h"
@@ -17,4 +17,4 @@ typedef struct _LevelValues
 } LevelValues;
 
 
-#endif /* SOURCE_INCLUDES_LEVELS_H_ */
+#endif /* _APS_LEVELS_H_ */

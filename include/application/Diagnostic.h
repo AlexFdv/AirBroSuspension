@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_APPLICATION_DIAGNOSTIC_H_
-#define INCLUDE_APPLICATION_DIAGNOSTIC_H_
+#ifndef _APS_DIAGNOSTIC_H_
+#define _APS_DIAGNOSTIC_H_
 
 #include "ConstantsCommon.h"
 #include "ADCController.h"
@@ -19,4 +19,4 @@ typedef struct
 
 } Diagnostic;
 
-#endif /* INCLUDE_APPLICATION_DIAGNOSTIC_H_ */
+#endif /* _APS_DIAGNOSTIC_H_ */

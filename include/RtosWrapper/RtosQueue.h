@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_RTOSWRAPPER_RTOSQUEUE_H_
-#define INCLUDE_RTOSWRAPPER_RTOSQUEUE_H_
+#ifndef _APS_RTOSWRAPPER_RTOSQUEUE_H_
+#define _APS_RTOSWRAPPER_RTOSQUEUE_H_
 
 #include "sys_common.h"
 #include "FreeRTOS.h"

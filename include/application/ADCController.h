@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_ADCCONTROLLER_H_
-#define SOURCE_INCLUDES_ADCCONTROLLER_H_
+#ifndef _APS_ADCCONTROLLER_H_
+#define _APS_ADCCONTROLLER_H_
 
 #include "../application/ConstantsCommon.h"
 #include "adc.h"
@@ -58,4 +58,4 @@ typedef struct idx_value
 void initializeADC();
 void getADCDataValues(AdcDataValues* adcData);
 
-#endif /* SOURCE_INCLUDES_ADCCONTROLLER_H_ */
+#endif /* _APS_ADCCONTROLLER_H_ */

@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_STRINGUTILS_H_
-#define SOURCE_INCLUDES_STRINGUTILS_H_
+#ifndef _APS_STRINGUTILS_H_
+#define _APS_STRINGUTILS_H_
 
 #include <ctype.h>
 
@@ -31,4 +31,4 @@ bool isDigits(const char* str, char stopChar)
     return (i == len);
 }
 
-#endif /* SOURCE_INCLUDES_STRINGUTILS_H_ */
+#endif /* _APS_STRINGUTILS_H_ */

@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_RTOSWRAPPER_RTOS_H_
-#define INCLUDE_RTOSWRAPPER_RTOS_H_
+#ifndef _APS_RTOSWRAPPER_RTOS_H_
+#define _APS_RTOSWRAPPER_RTOS_H_
 
 #include "sys_common.h"
 #include "FreeRTOS.h"
@@ -30,4 +30,4 @@ void delayTask(TickType_t ticks);
 void suspendAllTasks();
 boolean resumeAllTasks();
 
-#endif /* INCLUDE_RTOSWRAPPER_RTOS_H_ */
+#endif /* _APS_RTOSWRAPPER_RTOS_H_ */

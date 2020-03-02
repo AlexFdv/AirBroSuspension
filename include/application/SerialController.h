@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_SERIALCONTROLLER_H_
-#define SOURCE_INCLUDES_SERIALCONTROLLER_H_
+#ifndef _APS_SERIALCONTROLLER_H_
+#define _APS_SERIALCONTROLLER_H_
 
 #include <string.h>
 #include <stdlib.h>
@@ -48,4 +48,4 @@ inline void printNumber(const portLONG number)
 
 
 
-#endif /* SOURCE_INCLUDES_SERIALCONTROLLER_H_ */
+#endif /* _APS_SERIALCONTROLLER_H_ */

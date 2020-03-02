@@ -76,12 +76,6 @@
 
 /* USER CODE BEGIN (2) */
 
-void vTimerCallbackFunction(xTimerHandle xTimer)
-{
-    togglePin(LED_1_HET_PIN);
-}
-
-
 void criticalErrorHandler(void)
 {
     //@todo: go to hardware error mode
@@ -93,7 +87,6 @@ void criticalErrorHandler(void)
         }
     }
 }
-
 
 
 /* USER CODE END */
@@ -117,80 +110,11 @@ int main(void)
     initializeSci(&commandReceivedCallback);
     initializeADC();
 
-    if (!tasks_init())
+    if (tasksInit(criticalErrorHandler))
     {
-        criticalErrorHandler();
+        printSuccessString("Controller started");
+        vTaskStartScheduler();
     }
-    /*
-     *  Create tasks for commands receiving and handling
-     */
-
-    bool taskResult = true;
-
-    taskResult &= createTask(vCommandHandlerTask, "CommandHandlerTask", NULL, TASK_DEFAULT_PRIORITY);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    /*
-     *  Wheels tasks
-    */
-    taskResult &= createTask(vWheelTask, "WheelTaskFL", (void*) &wheelPinsFL, TASK_DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskFR", (void*) &wheelPinsFR, TASK_DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskBL", (void*) &wheelPinsBL, TASK_DEFAULT_PRIORITY);
-    taskResult &= createTask(vWheelTask, "WheelTaskBR", (void*) &wheelPinsBR, TASK_DEFAULT_PRIORITY);
-
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    /*
-     * Memory task
-     */
-    taskResult &= createTask(vMemTask, "MemTask", NULL, TASK_DEFAULT_PRIORITY);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    /*
-     * ADC converter task
-     */
-    taskResult &= createTask(vADCUpdaterTask, "ADCUpdater", NULL, TASK_DEFAULT_PRIORITY);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    /*
-     * Compressor task
-     */
-    taskResult &= createTask(vCompressorTask, "CompressorTask", NULL, TASK_DEFAULT_PRIORITY);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    /*
-     * Telemetry task
-     */
-    taskResult &= createTask(vTelemetryTask, "TelemetryTask", NULL, TASK_DEFAULT_PRIORITY);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    // temporary timer with priority 2
-    taskResult &= createAndRunTimer("SuperTimer", MS_TO_TICKS(500), vTimerCallbackFunction);
-    if (!taskResult)
-    {
-        criticalErrorHandler();
-    }
-
-    printSuccessString("Controller started");
-    vTaskStartScheduler();
 
     /* Should not be executed */
     criticalErrorHandler();

@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_RTOSWRAPPER_RTOSSEMAPHORE_H_
-#define INCLUDE_RTOSWRAPPER_RTOSSEMAPHORE_H_
+#ifndef _APS_RTOSWRAPPER_RTOSSEMAPHORE_H_
+#define _APS_RTOSWRAPPER_RTOSSEMAPHORE_H_
 
 #include "FreeRTOS.h"
 #include "os_semphr.h"

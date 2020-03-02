@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef SOURCE_INCLUDES_FEECONTROLLER_H_
-#define SOURCE_INCLUDES_FEECONTROLLER_H_
+#ifndef _APS_FEECONTROLLER_H_
+#define _APS_FEECONTROLLER_H_
 
 #include "ti_fee.h"
 
@@ -25,4 +25,4 @@ void writeSettings(void* settings);
 void writeSyncFEE(const uint16 blockNumber, void * value);
 void readSyncFEE(const uint16 blockNumber, void* value, unsigned int len);
 
-#endif /* SOURCE_INCLUDES_FEECONTROLLER_H_ */
+#endif /* _APS_FEECONTROLLER_H_ */

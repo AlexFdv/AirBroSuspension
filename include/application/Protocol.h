@@ -5,8 +5,8 @@
  *      Author: oleg
  */
 
-#ifndef INCLUDE_APPLICATION_PROTOCOL_H_
-#define INCLUDE_APPLICATION_PROTOCOL_H_
+#ifndef _APS_PROTOCOL_H_
+#define _APS_PROTOCOL_H_
 
 #include <stddef.h>
 
@@ -37,4 +37,4 @@ void printSuccessLevels(const LevelValues* const levels);
 
 void sendDiagnosticData(const void *data, size_t len);
 
-#endif /* INCLUDE_APPLICATION_PROTOCOL_H_ */
+#endif /* _APS_PROTOCOL_H_ */

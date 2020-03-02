@@ -5,8 +5,8 @@
  *      Author: oleg
  */
 
-#ifndef INCLUDE_APPLICATION_CONFIG_H_
-#define INCLUDE_APPLICATION_CONFIG_H_
+#ifndef _APS_CONFIG_H_
+#define _APS_CONFIG_H_
 
 
 #define APP_VERSION         "0.0.3"
@@ -15,4 +15,4 @@
 #define SIMPLE_WHEEL_LOGIC
 
 
-#endif /* INCLUDE_APPLICATION_CONFIG_H_ */
+#endif /* _APS_CONFIG_H_ */

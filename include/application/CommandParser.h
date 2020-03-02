@@ -5,8 +5,8 @@
  *      Author: Alex
  */
 
-#ifndef INCLUDE_APPLICATION_COMMANDPARSER_H_
-#define INCLUDE_APPLICATION_COMMANDPARSER_H_
+#ifndef _APS_COMMANDPARSER_H_
+#define _APS_COMMANDPARSER_H_
 
 #include "CommandStructs.h"
 #include "os_portmacro.h"
@@ -26,4 +26,4 @@ void parseParams(const char* const strCmd, Command* const retCommand );
 
 bool executeCommand(const Command* command);
 
-#endif /* INCLUDE_APPLICATION_COMMANDPARSER_H_ */
+#endif /* _APS_COMMANDPARSER_H_ */

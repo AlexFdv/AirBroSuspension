@@ -1,5 +1,5 @@
-#ifndef SOURCE_INCLUDES_SETTINGS_H_
-#define SOURCE_INCLUDES_SETTINGS_H_
+#ifndef _APS_SETTINGS_H_
+#define _APS_SETTINGS_H_
 
 #include <stdint.h>
 #include "Levels.h"
@@ -14,4 +14,4 @@ typedef struct _Settings
     uint16_t reserved_for_future[2];
 } Settings;
 
-#endif /* SOURCE_INCLUDES_SETTINGS_H_ */
+#endif /* _APS_SETTINGS_H_ */

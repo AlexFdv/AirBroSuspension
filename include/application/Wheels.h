@@ -5,8 +5,8 @@
  *      Author: oleg
  */
 
-#ifndef INCLUDE_APPLICATION_WHEELS_H_
-#define INCLUDE_APPLICATION_WHEELS_H_
+#ifndef _APS_WHEELS_H_
+#define _APS_WHEELS_H_
 
 #include "../RtosWrapper/Rtos.h" //todo: avoid FreeRTOS types
 #include "ADCController.h"
@@ -52,4 +52,4 @@ extern const WheelPinsStruct wheelPinsBR;
 
 
 
-#endif /* INCLUDE_APPLICATION_WHEELS_H_ */
+#endif /* _APS_WHEELS_H_ */
