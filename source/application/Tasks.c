@@ -405,7 +405,7 @@ static void sendToExecuteCommand(Command cmd)
 
     if ((cmd.commandType & WHEEL_COMMAND_TYPE) == WHEEL_COMMAND_TYPE)
     {
-        // detect up or down based on current level values.
+        // detect up or down based on current level values and comparing it with saved one
         if (cmd.commandType == CMD_WHEEL_AUTO)
         {
             printSuccess();
@@ -442,7 +442,7 @@ static void sendToExecuteCommand(Command cmd)
                 }
             }
         }
-        // execute any other WHEEL_COMMAND_TYPE command for all wheels if there is no arguments (up, down or stop)
+        // execute any other WHEEL_COMMAND_TYPE command for ALL wheels if there is no arguments (up, down or stop)
         else if (cmd.argc == 0)
         {
             printSuccess();
@@ -454,7 +454,7 @@ static void sendToExecuteCommand(Command cmd)
                 sendToQueueOverride(&wheelsCommandsQueues[i], (void*) &cmd); // always returns pdTRUE
             }
         }
-        // execute any other WHEEL_COMMAND_TYPE command for specific wheel if there is at least one parameter (up, down or stop)
+        // execute any other WHEEL_COMMAND_TYPE command for SPECIFIC wheel if there is at least one parameter (up, down or stop)
         else
         {
             WHEEL_IDX wheelNo = (WHEEL_IDX) cmd.argv[0];

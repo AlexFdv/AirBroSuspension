@@ -20,22 +20,22 @@
 
 
 /* ------------------------ Command Handlers ------------------------ */
-static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsGetHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsShowHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsSaveMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsGetMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool levelsGetMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool getComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool getComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool setComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
-static bool setComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc);
+static bool getVersionHandler(Command *cmd);
+static bool getBatVoltageHandler(Command *cmd);
+static bool getComprPressureHandler(Command *cmd);
+static bool helpHandler(Command *cmd);
+static bool levelsGetHandler(Command *cmd);
+static bool levelsSaveHandler(Command *cmd);
+static bool levelsShowHandler(Command *cmd);
+static bool levelsSaveMaxHandler(Command *cmd);
+static bool levelsSaveMinHandler(Command *cmd);
+static bool levelsGetMinHandler(Command *cmd);
+static bool levelsGetMaxHandler(Command *cmd);
+static bool memClearHandler(Command *cmd);
+static bool getComprMaxPressureHandler(Command *cmd);
+static bool getComprMinPressureHandler(Command *cmd);
+static bool setComprMinPressureHandler(Command *cmd);
+static bool setComprMaxPressureHandler(Command *cmd);
 
 /* ------------------------------------------------------------------ */
 
@@ -45,6 +45,21 @@ typedef enum
     SettingMax
 } SETTING_TYPE;
 
+typedef bool (*commandHandler)(Command *cmd);
+
+typedef struct
+{
+    COMMAND_TYPE cmdType;
+    portCHAR* cmdValue;
+    portSHORT cmdLen;
+    commandHandler handler;
+} CommandInfo;
+
+/**
+ * 1. Make the possibility to register a command handler.
+ * 2. The registered handlers should be called when command arrives. Command structure should be passed here.
+ * 3. Handlers should be in separate files. Communication with tasks should be via queues.
+ */
 
 //
 // max command lengh is MAX_COMMAND_LEN
@@ -76,6 +91,12 @@ static const CommandInfo CommandsList[] =
     {UNKNOWN_COMMAND,                   "",             0, NULL},
 };
 
+bool processCommand(const portCHAR command[MAX_COMMAND_LEN])
+{
+    Command cmd = parseCommand(command);
+    return executeCommand(&cmd);
+}
+
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 {
     Command parsedCommand =
@@ -102,7 +123,6 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 
     return parsedCommand;
 }
-
 
 void parseParams(const char* const strCmd, Command* const retCommand )
 {
@@ -131,7 +151,7 @@ void parseParams(const char* const strCmd, Command* const retCommand )
 }
 
 
-bool executeCommand(const Command* command)
+bool executeCommand(Command* command)
 {
     int i = 0;
     bool rv = false;
@@ -143,7 +163,7 @@ bool executeCommand(const Command* command)
             /* Command was found, run it! */
             if (CommandsList[i].handler != NULL)
             {
-                rv = (*CommandsList[i].handler)(command->argv, command->argc);
+                rv = (*CommandsList[i].handler)(command);
             }
             break;
         }
@@ -154,11 +174,8 @@ bool executeCommand(const Command* command)
 }
 
 /* ------------------------ Command Handlers ------------------------ */
-static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool getBatVoltageHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     bool rv = false;
     portLONG batteryVoltage = 0;
 
@@ -176,21 +193,15 @@ static bool getBatVoltageHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portC
 }
 
 
-static bool getVersionHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool getVersionHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     printSuccessString(APP_VERSION);
     return true;
 }
 
 
-static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool getComprPressureHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     bool rv = false;
     AdcValue_t level;
 
@@ -208,11 +219,8 @@ static bool getComprPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], po
 }
 
 
-static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool helpHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     int i = 0;
 
     while (UNKNOWN_COMMAND != CommandsList[i].cmdType)
@@ -226,10 +234,10 @@ static bool helpHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
 }
 
 
-static bool levelsGetHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsGetHandler(Command *cmd)
 {
-    portSHORT levelNumber = (argc != 0) ? argv[0] : 0;
-    if (levelNumber < LEVELS_COUNT && argc != 0)
+    portSHORT levelNumber = (cmd->argc != 0) ? cmd->argv[0] : 0;
+    if (levelNumber < LEVELS_COUNT && cmd->argc != 0)
     {
         printSuccessLevels(&(getCachedWheelLevels()[levelNumber]));
     }
@@ -242,16 +250,16 @@ static bool levelsGetHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR 
 }
 
 
-static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsSaveHandler(Command *cmd)
 {
-    short levelNumber = (argc != 0) ? argv[0] : 0;
-    if (levelNumber >= LEVELS_COUNT || argc == 0)
+    short levelNumber = (cmd->argc != 0) ? cmd->argv[0] : 0;
+    if (levelNumber >= LEVELS_COUNT || cmd->argc == 0)
     {
         printError(WrongLevelSpecifiedErrorCode, "Wrong level number specified");
         return false;
     }
 
-    bool useDummyValue = (argc == 2);
+    bool useDummyValue = (cmd->argc == 2);
     LevelValues currLevels;
 
     if (useDummyValue)
@@ -259,7 +267,7 @@ static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
         short i;
         for (i = 0; i< WHEELS_COUNT;++i)
         {
-            currLevels.wheels[i] = argv[1];
+            currLevels.wheels[i] = cmd->argv[1];
         }
     }
     else if (!getCurrentWheelsLevelsValues(&currLevels))
@@ -278,11 +286,8 @@ static bool levelsSaveHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
 }
 
 
-static bool levelsShowHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsShowHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     LevelValues currLevels;
     if (getCurrentWheelsLevelsValues(&currLevels))
     {
@@ -315,67 +320,52 @@ static inline bool saveLevels(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR
 }
 
 
-static bool levelsSaveMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsSaveMinHandler(Command *cmd)
 {
-    return saveLevels(argv, argc, SettingMin);
+    return saveLevels(cmd->argv, cmd->argc, SettingMin);
 }
 
 
-static bool levelsSaveMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsSaveMaxHandler(Command *cmd)
 {
-    return saveLevels(argv, argc, SettingMax);
+    return saveLevels(cmd->argv, cmd->argc, SettingMax);
 }
 
 
-static bool levelsGetMinHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsGetMinHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     printSuccessLevels(&(getSettings()->levels_values_min));
 
     return true;
 }
 
 
-static bool levelsGetMaxHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool levelsGetMaxHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     printSuccessLevels(&(getSettings()->levels_values_max));
 
     return true;
 }
 
 
-static bool memClearHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool memClearHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     formatFEE();
 
     return true;
 }
 
 
-static bool getComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool getComprMaxPressureHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     printSuccessNumber(getSettings()->compressor_preasure_max);
 
     return true;
 }
 
 
-static bool getComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool getComprMinPressureHandler(Command *cmd)
 {
-    (void) argv;
-    (void) argc;
-
     printSuccessNumber(getSettings()->compressor_preasure_min);
 
     return true;
@@ -399,13 +389,13 @@ inline static bool setComprPressure(const portSHORT argv[COMMAND_ARGS_LIMIT], po
     return true;
 }
 
-static bool setComprMinPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool setComprMinPressureHandler(Command *cmd)
 {
-    return setComprPressure(argv, argc, SettingMin);
+    return setComprPressure(cmd->argv, cmd->argc, SettingMin);
 }
 
 
-static bool setComprMaxPressureHandler(const portSHORT argv[COMMAND_ARGS_LIMIT], portCHAR argc)
+static bool setComprMaxPressureHandler(Command *cmd)
 {
-    return setComprPressure(argv, argc, SettingMax);
+    return setComprPressure(cmd->argv, cmd->argc, SettingMax);
 }
