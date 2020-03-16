@@ -22,7 +22,8 @@ short receivedLen = 0;
 uint8 receivedCommand[MAX_COMMAND_LEN] = {'\0'};
 uint8 receivedByte;
 
-#define STOP_CHAR 0x0A //0x0D = enter, 0x0A = \n
+#define STOP_CHAR 0x0D // enter
+//#define STOP_CHAR 0x0A // \n
 
 void initializeSci(Callback dataCallback)
 {

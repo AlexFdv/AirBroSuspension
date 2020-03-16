@@ -11,6 +11,18 @@
 #include "RtosWrapper/RtosSemaphore.h"
 #include "RtosWrapper/RtosQueue.h"
 
+#define OK_HEADER "#OK"
+#define ERROR_HEADER "#ERROR"
+#define NEW_LINE_CHAR "\n"
+#define CARRIAGE_RETURN_CHAR "\r"
+
+#define LINE_ENDING_DEFAULT         NEW_LINE_CHAR    // for unit tests and production
+#define LINE_ENDING_FOR_TERMINAL    CARRIAGE_RETURN_CHAR NEW_LINE_CHAR
+
+#define LINE_ENDING LINE_ENDING_DEFAULT
+
+
+
 /*========================== Static members ==========================*/
 
 static Semaphore uartMutexSemaphore;
@@ -34,11 +46,11 @@ void printError(int code, const char* text)
 {
     takeSemaphore(&uartMutexSemaphore);
 
-    printText("#ERROR:");
+    printText(ERROR_HEADER ":");
     printNumber(code);
     printText(":");
     printText(text);
-    printText("\n");
+    printText(LINE_ENDING);
 
     giveSemaphore(&uartMutexSemaphore);
 }
@@ -46,7 +58,7 @@ void printError(int code, const char* text)
 void printSuccess()
 {
     takeSemaphore(&uartMutexSemaphore);
-    printText("#OK\n");
+    printText(OK_HEADER LINE_ENDING);
     giveSemaphore(&uartMutexSemaphore);
 }
 
@@ -54,9 +66,9 @@ void printSuccessString(const char* text)
 {
     takeSemaphore(&uartMutexSemaphore);
 
-    printText("#OK:");
+    printText(OK_HEADER ":");
     printText(text);
-    printText("\n");
+    printText(LINE_ENDING);
 
     giveSemaphore(&uartMutexSemaphore);
 }
@@ -65,9 +77,9 @@ void printSuccessNumber(long number)
 {
     takeSemaphore(&uartMutexSemaphore);
 
-    printText("#OK:");
+    printText(OK_HEADER ":");
     printNumber(number);
-    printText("\n");
+    printText(LINE_ENDING);
 
     giveSemaphore(&uartMutexSemaphore);
 }
@@ -76,9 +88,9 @@ void printSuccessLevels(const LevelValues* const levels)
 {
     takeSemaphore(&uartMutexSemaphore);
 
-    printText("#OK:");
+    printText(OK_HEADER ":");
     printLevels(levels);
-    printText("\n");
+    printText(LINE_ENDING);
 
     giveSemaphore(&uartMutexSemaphore);
 }
