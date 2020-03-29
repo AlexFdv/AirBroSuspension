@@ -368,40 +368,6 @@ static void executeWheelLogic(WheelStatusStruct* wheelStatus)
         wheelStatus->isWorking = elapsedTimeSec < wheelStatus->timeoutSec;
     }
 }  // executeWheelLogic
-
-static void sendToExecuteCommand(Command cmd)
-{
-    if (cmd.commandType == CMD_SET_COMPRESSOR_MIN_PRESSURE
-            || cmd.commandType == CMD_SET_COMPRESSOR_MAX_PRESSURE
-            || cmd.commandType == CMD_GET_COMPRESSOR_MIN_PRESSURE
-            || cmd.commandType == CMD_GET_COMPRESSOR_MAX_PRESSURE)
-    {
-            // send to execution inside vMemTask task, memtask calls executeCommand
-            if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
-            {
-                printError(
-                        MemoryQueueErrorCode,
-                        "Could not add memory command to the queue (it is full).");
-            }
-    }
-    // send to execution inside vMemTask task
-    else if ((cmd.commandType & LEVELS_COMMAND_TYPE) == LEVELS_COMMAND_TYPE)
-    {
-        // add command to the memory task queue: clear, save, print levels.
-        // if arguments is empty, then default cell number is 0 (see vMemTask for details).
-        if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
-        {
-            printError(
-                    MemoryQueueErrorCode,
-                    "Could not add memory command to the queue (it is full).");
-        }
-    }
-    else
-    {
-        executeCommand(&cmd);
-    }
-}
-
 static void initializeWheelStatus(WheelStatusStruct* wheelStatus, Command* cmd)
 {
     wheelStatus->isWorking = true;
@@ -462,7 +428,54 @@ static void vMemTask(void *pvParameters)
         boolean result = popFromQueue(&memoryCommandsQueue, &cmd);
         if (result)
         {
-            executeCommand(&cmd);
+            switch (cmd.commandType)
+            {
+            case CMD_LEVELS_SAVE_MAX:
+                levelsSaveMaxHandler(&cmd);
+                break;
+            case CMD_LEVELS_SAVE_MIN:
+                levelsSaveMinHandler(&cmd);
+                break;
+            case CMD_LEVELS_SAVE:
+                levelsSaveHandler(&cmd);
+                break;
+            case CMD_LEVELS_GET_MAX:
+                levelsGetMaxHandler(&cmd);
+                break;
+            case CMD_LEVELS_GET_MIN:
+                levelsGetMinHandler(&cmd);
+                break;
+            case CMD_LEVELS_GET:
+                levelsGetHandler(&cmd);
+                break;
+            case CMD_LEVELS_SHOW:
+                levelsShowHandler(&cmd);
+                break;
+            case CMD_MEM_CLEAR:
+                memClearHandler(&cmd);
+                break;
+            case CMD_GET_BATTERY:
+                getBatVoltageHandler(&cmd);
+                break;
+            case CMD_GET_COMPRESSOR_PRESSURE:
+                getComprPressureHandler(&cmd);
+                break;
+            case CMD_SET_COMPRESSOR_MAX_PRESSURE:
+                setComprMaxPressureHandler(&cmd);
+                break;
+            case CMD_SET_COMPRESSOR_MIN_PRESSURE:
+                setComprMinPressureHandler(&cmd);
+                break;
+            case CMD_GET_COMPRESSOR_MAX_PRESSURE:
+                getComprMaxPressureHandler(&cmd);
+                break;
+            case CMD_GET_COMPRESSOR_MIN_PRESSURE:
+                getComprMinPressureHandler(&cmd);
+                break;
+            default:
+                printError(UnknownCommandErrorCode, "Unknown command received.");
+                break;
+            }
         }
         else
         {
@@ -676,35 +689,41 @@ static void vWheelTask(void *pvParameters)
     deleteTask();
 }
 
+static portSHORT envCommandHandler(Command *cmd)
+{
+    switch (cmd->commandType)
+    {
+    case CMD_GET_BATTERY:
+        return getBatVoltageHandler(cmd);
+    case CMD_GET_VERSION:
+        return getVersionHandler(cmd);
+    }
+
+    return 1;
+}
+
+static portSHORT sendCommandToMemoryTask(Command *cmd)
+{
+    if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) cmd, 0))
+    {
+        printError(MemoryQueueErrorCode,
+                   "Could not add memory command to the queue (it is full).");
+
+        return 1;
+    }
+
+    return 0;
+}
+
 static void vCommandHandlerTask(void *pvParameters)
 {
     portCHAR receivedCommand[MAX_COMMAND_LEN] = { '\0' };
 
-    // TODO: register commands handlers
+    registerCommandHandler(WHEEL_COMMAND_TYPE, wheelCommandHandler);
+    registerCommandHandler(MEMORY_COMMAND_TYPE, sendCommandToMemoryTask);
+    registerCommandHandler(ENV_COMMAND_TYPE, envCommandHandler);
 
-    registerCommandHandler(CMD_WHEEL_UP, wheelCommandHandler);
-    registerCommandHandler(CMD_WHEEL_DOWN, wheelCommandHandler);
-    registerCommandHandler(CMD_WHEEL_STOP, wheelCommandHandler);
-    registerCommandHandler(CMD_WHEEL_AUTO, wheelAutoCommandHandler);
-    registerCommandHandler(CMD_LEVELS_SAVE_MAX, levelsSaveMaxHandler);
-    registerCommandHandler(CMD_LEVELS_SAVE_MIN, levelsSaveMinHandler);
-    registerCommandHandler(CMD_LEVELS_SAVE, levelsSaveHandler);
-    registerCommandHandler(CMD_LEVELS_GET_MAX, levelsGetMaxHandler);
-    registerCommandHandler(CMD_LEVELS_GET_MIN, levelsGetMinHandler);
-    registerCommandHandler(CMD_LEVELS_GET, levelsGetHandler);
-    registerCommandHandler(CMD_LEVELS_SHOW, levelsShowHandler);
-    registerCommandHandler(CMD_MEM_CLEAR, memClearHandler);
-    registerCommandHandler(CMD_GET_BATTERY, getBatVoltageHandler);
-    registerCommandHandler(CMD_GET_COMPRESSOR_PRESSURE, getComprPressureHandler);
-    registerCommandHandler(CMD_SET_COMPRESSOR_MAX_PRESSURE, setComprMaxPressureHandler); /// one handler that sends Command to vMemTask, and inside vMemTask deside which exectly command to execute.
-    registerCommandHandler(CMD_SET_COMPRESSOR_MIN_PRESSURE, setComprMinPressureHandler);
-    registerCommandHandler(CMD_GET_COMPRESSOR_MAX_PRESSURE, getComprMaxPressureHandler);
-    registerCommandHandler(CMD_GET_COMPRESSOR_MIN_PRESSURE, getComprMinPressureHandler);
-    registerCommandHandler(CMD_GET_VERSION, getVersionHandler);
     registerCommandHandler(UNKNOWN_COMMAND, unknownCommandHandler);
-
-    // TODO: for LEVELS_COMMAND_TYPE make commands registration by command MASK
-
 
     for (;;)
     {
@@ -713,7 +732,7 @@ static void vCommandHandlerTask(void *pvParameters)
         if (popFromQueue(&commandsQueue, receivedCommand))
         {
             Command command = parseCommand(receivedCommand);
-            sendToExecuteCommand(command);
+            executeCommand(&command);
         }
         else
         {
@@ -725,7 +744,6 @@ static void vCommandHandlerTask(void *pvParameters)
     }
     deleteTask();
 }
-
 
 /* ========== TODO: move to separate files ============= */
 
@@ -781,6 +799,11 @@ static portSHORT wheelAutoCommandHandler(Command *cmd)
 
 static portSHORT wheelCommandHandler(Command *cmd)
 {
+    if (cmd->commandType == CMD_WHEEL_AUTO)
+    {
+        return wheelAutoCommandHandler(cmd);
+    }
+
     // execute Up, Down or Stop command for ALL wheels if there is no arguments
     if (cmd->argc == 0)
     {
@@ -1007,17 +1030,5 @@ static portSHORT setComprMaxPressureHandler(Command *cmd)
     return !setComprPressure(cmd->argv, cmd->argc, SettingMax);
 }
 
-/*static portSHORT sendCommandToMemoryTask(Command *cmd)
-{
-    if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) &cmd, 0))
-    {
-        printError(MemoryQueueErrorCode,
-                   "Could not add memory command to the queue (it is full).");
-
-        return 1;
-    }
-
-    return 0;
-}*/
 
 
