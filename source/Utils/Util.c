@@ -19,12 +19,18 @@ char *err2str(int code)
         return "Unknown command received";
     case WrongWheelSpecifiedErrorCode:
         return "Wrong wheel number specified";
-    case QueueReadTimeoutErrorCode:
-        return "Timeout at value reading from the queue";
     case QueueWheelLevelReadTimeoutErrorCode:
-            return "Timeout at wheel level value reading from the queue";
-    case MemoryQueueErrorCode:
-        return "Timeout in memory queue";
+        return "Timeout at wheel level value reading from the queue";
+    case QueueCompressorReadTimeoutErrorCode:
+        return "Timeout at compressor value reading from the queue";
+    case QueueBatteryReadTimeoutErrorCode:
+        return "Timeout at battery value reading from the queue";
+    case QueueAdcAverageReadTimeoutErrorCode:
+        return "Timeout at ADC average value reading from the queue";
+    case MemorySendQueueErrorCode:
+        return "Timeout in sending to the memory queue";
+    case MemoryReceiveQueueErrorCode:
+        return "Timeout in receiving from the memory queue";
     case CommandsQueueErrorCode:
         return "Could not receive a value from the queue.";
     }

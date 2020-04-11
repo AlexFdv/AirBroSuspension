@@ -225,7 +225,7 @@ inline void stopWheel(WheelPinsStruct wheelPins)
         return 0;
     }
 
-    return QueueReadTimeoutErrorCode;
+    return QueueBatteryReadTimeoutErrorCode;
 }
 
 inline bool getWheelLevelValue(const portSHORT wheelNumber,
@@ -274,7 +274,7 @@ Settings* getSettings(void)
     if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX], retLevel,
                                   0))
     {
-        return QueueReadTimeoutErrorCode;
+        return QueueCompressorReadTimeoutErrorCode;
     }
     return 0;
 }
@@ -293,7 +293,7 @@ static void executeWheelLogic(WheelStatusStruct* wheelStatus)
     if (!readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber],
                                   &levelValue, 0))
     {
-        printErrorStr(QueueReadTimeoutErrorCode, "Read timeout from wheel level ADC values");
+        printError(QueueWheelLevelReadTimeoutErrorCode);
         wheelStatus->isWorking = false;
         return;
     }
@@ -308,7 +308,7 @@ static void executeWheelLogic(WheelStatusStruct* wheelStatus)
         AdcValue_t average_delta = 0;
         if (!readFromQueueWithTimeout(&adcAverageQueue, &average_delta, 0))
         {
-            printErrorStr(QueueReadTimeoutErrorCode, "Read timeout from ADC average value");
+            printError(QueueAdcAverageReadTimeoutErrorCode);
             wheelStatus->isWorking = false;
             return;
         }
@@ -444,7 +444,7 @@ static void vMemTask(void *pvParameters)
         }
         else
         {
-            printError(MemoryQueueErrorCode);
+            printError(MemoryReceiveQueueErrorCode);
         }
 
         DUMMY_BREAK;
@@ -564,7 +564,7 @@ static void vCompressorTask(void *pvParameters)
         if (!readFromQueueWithTimeout(&adcValuesQueues[COMPRESSOR_IDX],
                                       &levelValue, 0))
         {
-            printErrorStr(QueueReadTimeoutErrorCode, "Read timeout from compressor ADC value");
+            printErrorStr(QueueCompressorReadTimeoutErrorCode, "Read timeout from compressor ADC value");
             continue;
         }
 
@@ -670,7 +670,7 @@ static portSHORT sendCommandToMemoryTaskHandler(Command *cmd)
 {
     if (!sendToQueueWithTimeout(&memoryCommandsQueue, (void*) cmd, 0))
     {
-        return MemoryQueueErrorCode;
+        return MemorySendQueueErrorCode;
     }
 
     return 0;

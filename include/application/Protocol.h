@@ -15,13 +15,17 @@
 enum error_codes
 {
     UndefinedErrorCode = 0,
-    UnknownCommandErrorCode = 1,
-    WrongWheelSpecifiedErrorCode = 2,
-    WrongLevelSpecifiedErrorCode = 3,
-    QueueReadTimeoutErrorCode = 4,
-    QueueWheelLevelReadTimeoutErrorCode = 5,
-    MemoryQueueErrorCode = 6,
-    CommandsQueueErrorCode = 7
+    UnknownCommandErrorCode ,
+    WrongWheelSpecifiedErrorCode,
+    WrongLevelSpecifiedErrorCode,
+    QueueWheelLevelReadTimeoutErrorCode,
+    QueueCompressorReadTimeoutErrorCode,
+    QueueBatteryReadTimeoutErrorCode,
+    QueueAdcAverageReadTimeoutErrorCode,
+    MemorySendQueueErrorCode,
+    MemoryReceiveQueueErrorCode,
+    CommandsQueueErrorCode,
+
 };
 
 bool protocol_init(void);
