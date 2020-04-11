@@ -5,11 +5,14 @@
  *      Author: oleg
  */
 
+#include <Util.h>
 #include "application/Protocol.h"
 #include "application/SerialController.h"
 #include "RtosWrapper/Rtos.h"
 #include "RtosWrapper/RtosSemaphore.h"
 #include "RtosWrapper/RtosQueue.h"
+
+#include "Utils/Util.h"
 
 #define OK_HEADER "#OK"
 #define ERROR_HEADER "#ERROR"
@@ -41,8 +44,7 @@ bool protocol_init(void)
     return (uartMutexSemaphore.handle != NULL);
 }
 
-
-void printError(int code, const char* text)
+void printErrorStr(int code, const char* text)
 {
     takeSemaphore(&uartMutexSemaphore);
 
@@ -53,6 +55,11 @@ void printError(int code, const char* text)
     printText(LINE_ENDING);
 
     giveSemaphore(&uartMutexSemaphore);
+}
+
+void printError(int code)
+{
+    printErrorStr(code, err2str(code));
 }
 
 void printSuccess()

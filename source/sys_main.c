@@ -79,7 +79,7 @@
 void criticalErrorHandler(void)
 {
     //@todo: go to hardware error mode
-    printError(UndefinedErrorCode, "Initialization error.");
+    printErrorStr(UndefinedErrorCode, "Initialization error.");
     while(1)
     {
         if (0){

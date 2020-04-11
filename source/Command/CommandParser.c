@@ -14,18 +14,10 @@
 #include "Protocol.h"
 #include "Config.h"
 #include "../RtosWrapper/Rtos.h"
-
-// TODO: move to wrapper
-#include "os_list.h"
+#include "../Utils/List.h"
 
 #define ARRSIZE(x)          (sizeof(x) / sizeof((x)[0]))
 #define DELIMITER_CHAR      (':')
-
-static portSHORT helpHandler(Command *cmd);
-
-
-
-
 
 typedef struct
 {
@@ -59,6 +51,7 @@ static CommandInfo commandsList[] =
     {CMD_GET_COMPRESSOR_MIN_PRESSURE,   "cminget",      7},
     {CMD_GET_VERSION,                   "ver",          3},
     {CMD_HELP,                          "help",         4},
+    {UNKNOWN_COMMAND,                    "",            0},
 };
 
 typedef struct
@@ -67,55 +60,12 @@ typedef struct
     commandHandler handler;
 } CommandHandler;
 
-static CommandHandler commandHandlersList[] =
+void registerCommandHandler(List *list, COMMAND_TYPE cmdType, commandHandler handler)
 {
-    { WHEEL_COMMAND_TYPE, NULL},
-    { MEMORY_COMMAND_TYPE, NULL },
-    { ENV_COMMAND_TYPE, NULL },
-    { UNKNOWN_COMMAND, NULL}
-};
-
-
-// =============================== os_heap.h pvPortMalloc
-/*typedef struct
-{
-    CmdInfo *next;
-    CmdInfo *subCommands;
-
-    COMMAND_TYPE cmdType;
-    portCHAR* cmdValue;
-    portSHORT cmdLen;
-    commandHandler handler;
-} CmdInfo;
-
-
-static List_t cmdList = {};
-
-portSHORT regCommand()
-{
-    if (!listLIST_IS_INITIALISED(&cmdList))
-    {
-        vListInitialise(&cmdList);
-    }
-
-    return 0;
-}*/
-
-// ===============================
-bool registerCommandHandler(COMMAND_TYPE cmdType, commandHandler handler)
-{
-    portSHORT i = 0;
-
-    for(; i < ARRSIZE(commandsList); ++i)
-    {
-        if(cmdType == commandHandlersList[i].cmdType)
-        {
-            commandHandlersList[i].handler = handler;
-            return true;
-        }
-    }
-
-    return false;
+    CommandHandler *cmdHandler = (CommandHandler *)pvPortMalloc(sizeof(CommandHandler));
+    cmdHandler->cmdType = cmdType;
+    cmdHandler->handler = handler;
+    insertListItem(list, (void*)cmdHandler);
 }
 
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
@@ -171,20 +121,22 @@ void parseParams(const char* const strCmd, Command* const retCommand )
     }
 }
 
-
-bool executeCommand(Command* command)
+int executeCommand(List *list, Command* command, bool use_mask)
 {
-    portSHORT i = 0;
-    bool rv = false;
+    int rv = 0;
 
-    for (; i < ARRSIZE(commandHandlersList); ++i)
+    ListItem *item = listGET_LIST_HEAD(list);
+
+    for (; item; item = item->next)
     {
-        if ((command->commandType & commandHandlersList[i].cmdType) == commandHandlersList[i].cmdType)
+        CommandHandler *handler = (CommandHandler *)item->value;
+        bool condition = use_mask ? ((command->commandType & handler->cmdType) == handler->cmdType) : (command->commandType == handler->cmdType);
+        if (condition)
         {
             /* Command was found, run it! */
-            if (commandHandlersList[i].handler != NULL)
+            if (handler->handler != NULL)
             {
-                rv = (*commandHandlersList[i].handler)(command);
+                rv = (*(handler->handler))(command);
             }
             break;
         }
@@ -196,7 +148,7 @@ bool executeCommand(Command* command)
 /* ------------------------ Command Handlers ------------------------ */
 
 
-static portSHORT helpHandler(Command *cmd)
+portSHORT helpHandler(Command *cmd)
 {
     int i = 0;
 

@@ -10,14 +10,15 @@
 
 #include "CommandStructs.h"
 #include "os_portmacro.h"
+#include "Utils/List.h"
 
 typedef portSHORT (*commandHandler)(Command *cmd);
 
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN]);
 void parseParams(const char* const strCmd, Command* const retCommand );
 
-bool executeCommand(Command* command);
+int executeCommand(List *list, Command* command, bool use_mask);
 
-bool registerCommandHandler(COMMAND_TYPE cmdType, commandHandler handler);
+void registerCommandHandler(List *list, COMMAND_TYPE cmdType, commandHandler handler);
 
 #endif /* _APS_COMMANDPARSER_H_ */

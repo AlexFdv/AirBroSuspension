@@ -19,13 +19,16 @@ enum error_codes
     WrongWheelSpecifiedErrorCode = 2,
     WrongLevelSpecifiedErrorCode = 3,
     QueueReadTimeoutErrorCode = 4,
-    MemoryQueueErrorCode = 5,
-    CommandsQueueErrorCode = 6
+    QueueWheelLevelReadTimeoutErrorCode = 5,
+    MemoryQueueErrorCode = 6,
+    CommandsQueueErrorCode = 7
 };
 
 bool protocol_init(void);
 
-void printError(int code, const char* text);
+void printError(int code);
+
+void printErrorStr(int code, const char* text);
 
 void printSuccess(void);
 
