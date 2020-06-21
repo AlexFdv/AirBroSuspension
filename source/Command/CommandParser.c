@@ -68,6 +68,32 @@ void registerCommandHandler(List *list, COMMAND_TYPE cmdType, commandHandler han
     insertListItem(list, (void*)cmdHandler);
 }
 
+static void parseParams(const char* const strCmd, Command* const retCommand )
+{
+    portCHAR* str = strchr(strCmd, DELIMITER_CHAR);
+    while (str != NULL)
+    {
+        ++str;
+        if (isDigits(str, DELIMITER_CHAR))
+        {
+            portSHORT param = atoi(str);
+            retCommand->argv[retCommand->argc] = param;
+            retCommand->argc++;
+
+            str = strchr(str, DELIMITER_CHAR);
+        }
+        else
+        {
+            break;
+        }
+
+        if (retCommand->argc >= COMMAND_ARGS_LIMIT)
+        {
+            break;
+        }
+    }
+}
+
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
 {
     Command parsedCommand =
@@ -95,32 +121,6 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
     return parsedCommand;
 }
 
-void parseParams(const char* const strCmd, Command* const retCommand )
-{
-    portCHAR* str = strchr(strCmd, DELIMITER_CHAR);
-    while (str != NULL)
-    {
-        ++str;
-        if (isDigits(str, DELIMITER_CHAR))
-        {
-            portSHORT param = atoi(str);
-            retCommand->argv[retCommand->argc] = param;
-            retCommand->argc++;
-
-            str = strchr(str, DELIMITER_CHAR);
-        }
-        else
-        {
-            break;
-        }
-
-        if (retCommand->argc >= COMMAND_ARGS_LIMIT)
-        {
-            break;
-        }
-    }
-}
-
 int executeCommand(List *list, Command* command, bool use_mask)
 {
     int rv = 0;
@@ -146,7 +146,6 @@ int executeCommand(List *list, Command* command, bool use_mask)
 }
 
 /* ------------------------ Command Handlers ------------------------ */
-
 
 portSHORT helpHandler(Command *cmd)
 {

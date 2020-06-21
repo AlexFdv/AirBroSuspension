@@ -107,6 +107,7 @@ void sendDiagnosticData(const void *data, size_t len)
 {
     sciSendDataLin((uint8*)data, len);
 }
+
 /*================= Static functions implementations =================*/
 
 inline void printLevels(const LevelValues* const levels)

@@ -15,7 +15,6 @@
 typedef portSHORT (*commandHandler)(Command *cmd);
 
 Command parseCommand(const portCHAR command[MAX_COMMAND_LEN]);
-void parseParams(const char* const strCmd, Command* const retCommand );
 
 int executeCommand(List *list, Command* command, bool use_mask);
 

@@ -990,6 +990,3 @@ static portSHORT setComprMaxPressureHandler(Command *cmd)
 {
     return setComprPressure(cmd->argv, cmd->argc, SettingMax);
 }
-
-
-
