@@ -10,6 +10,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "os_portmacro.h"
 
@@ -34,14 +35,16 @@ inline void printTextLin(const portCHAR* text)
 inline void printNumberLin(const portLONG number)
 {
     char buff[10] = {'\0'};
-    ltoa(number, buff);
+//    ltoa(number, buff);
+    sprintf(buff, "%l", number);
     printTextLin(buff);
 }
 
 inline void printNumber(const portLONG number)
 {
     char buff[10] = {'\0'};
-    ltoa(number, buff);
+//    ltoa(number, buff);
+    sprintf(buff, "%l", number);
     printText(buff);
 }
 
