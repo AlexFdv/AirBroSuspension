@@ -42,7 +42,7 @@
  * 01.13.02       12Jun2014	   Vishwanath Reddy     SDOCM00108238	 In TI_FeeInternal_FeeManager, change the state to
  *                                                                   IDLE, after completing the copy operation.   
  * 01.14.00		  26Mar2014    Vishwanath Reddy 	SDOCM00107161    Update jobresult before updaing module state. 
- * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for Conqueror.
+ * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for TMS570LCx.
  * 01.16.00		  15Jul2014    Vishwanath Reddy 	SDOCM00112141    Remove  MISRA warnings.
  * 01.16.01		  12Sep2014	   Vishwanath Reddy     SDOCM00112930    New API TI_Fee_SuspendResumeErase Added.
  *                                                                   TI_FeeInternal_FindInvalidVirtualSector modified
@@ -105,10 +105,15 @@
  *                                                                   flash status before calling TI_Fee_Init.
  * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Removed Block Size interpretaion for Blocks that 
  *                                                                   are not Valid, Invalid or Empty. 
+ * 01.19.04       15Dec2017    Prathap Srinivasan   HERCULES_SW-5082 Fixed TI_Fee_SuspendResumeErase function to store    
+ *                                                                   and restore FEE_ModuleState, when entering suspend 
+ *                                                                   and resuming.
+ *                                                  HERCULES_SW-5083 Fixed TI_FeeInternal_FeeManager() to pass correct 
+ *																	 parameters for CRC calculation.
  *********************************************************************************************************************/
 
 /*
-* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
+* Copyright (C) 2009-2018 Texas Instruments Incorporated - www.ti.com  
 * 
 * 
 *  Redistribution and use in source and binary forms, with or without 
@@ -2326,7 +2331,7 @@ TI_Fee_StatusType TI_FeeInternal_FeeManager(uint8 u8EEPIndex)
 								u32UnConfiguredBlockAddress -= (((TI_FEE_BLOCK_OVERHEAD >> 2U)-1U) << 2U);
 
 								/* Check data integrity by recalculating the Checksum of the block */   
-								u8WriteDataptrTemp = (uint8 *)(u32UnConfiguredBlockAddress);
+								u8WriteDataptrTemp = (uint8 *)(u32UnConfiguredBlockAddress) + TI_FEE_BLOCK_OVERHEAD;
 								u32CalculateCheckSum = TI_FeeInternal_Fletcher16(u8WriteDataptrTemp, u16BlockSize);
 								u32CalculateCheckSum |= (0xFFFF << 0x10U) ;									
 								/* Copy the block only if checksum matches*/
@@ -3783,6 +3788,9 @@ void TI_Fee_ErrorHookDoubleBitError(void)
 void TI_Fee_SuspendResumeErase(TI_Fee_EraseCommandType Command)
 {
 	uint8 u8EEPIndex = 0U;
+	static TI_FeeJobResultType static_u16JobResult;
+	static TI_FeeModuleStatusType static_ModuleState;
+	static uint8 static_u8EraseSuspended[TI_FEE_NUMBER_OF_EEPS];
 
 	while(u8EEPIndex<TI_FEE_NUMBER_OF_EEPS)
 	{
@@ -3790,30 +3798,44 @@ void TI_Fee_SuspendResumeErase(TI_Fee_EraseCommandType Command)
 		{
 			if(TI_Fee_oStatusWord[u8EEPIndex].Fee_StatusWordType_ST.Erase != 0U)
 			{
-				/* Suspend Erase */
-				/*Suspending Erase when erase was not started has no effect */
+			    /* Suspend Erase */
+				/* Suspending Erase when erase was not started has no effect */
 				FAPI_SUSPEND_FSM;
 				/* Wait until Flash is not BUSY. It will take approximately
 				  43usec for the FSM state machine to come out of BUSY state, if ERASE was started */
 				(void)TI_FeeInternal_PollFlashStatus();
 				TI_Fee_oStatusWord[u8EEPIndex].Fee_StatusWordType_ST.Erase = 0U;
+				static_u8EraseSuspended[u8EEPIndex] = 1u;
+				static_u16JobResult = TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult;
+				static_ModuleState = TI_Fee_GlobalVariables[u8EEPIndex].Fee_ModuleState;
+	            TI_Fee_bEraseSuspended = TRUE;
+	            if(TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult == JOB_PENDING)
+	            {
+	                TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult = JOB_OK;
+	                #if(STD_OFF == TI_FEE_POLLING_MODE)
+	                TI_FEE_NVM_JOB_END_NOTIFICATION();
+	                #endif
+	            }
+	            /* Set the module state to IDLE */
+	            TI_Fee_GlobalVariables[u8EEPIndex].Fee_ModuleState = IDLE;
 			}
-			TI_Fee_bEraseSuspended = TRUE;
-			if(TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult == JOB_PENDING)
+			else
 			{
-				TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult = JOB_OK;
-				#if(STD_OFF == TI_FEE_POLLING_MODE)
-				TI_FEE_NVM_JOB_END_NOTIFICATION();
-				#endif
+			    static_u8EraseSuspended[u8EEPIndex] = 0u;
 			}
-			/* Set the module state to IDLE */
-			TI_Fee_GlobalVariables[u8EEPIndex].Fee_ModuleState = IDLE;
 		}
 		else
 		{
-			TI_Fee_bEraseSuspended = FALSE;
-			/*Resuming Erase when it was not suspended has no effect */
-			(void)Fapi_issueAsyncCommand(Fapi_EraseResume);
+		    if(1u == static_u8EraseSuspended[u8EEPIndex])
+		    {
+	            TI_Fee_bEraseSuspended = FALSE;
+	            /*Resuming Erase when it was not suspended has no effect */
+	            (void)Fapi_issueAsyncCommand(Fapi_EraseResume);
+	            static_u8EraseSuspended[u8EEPIndex] = 0u;
+                TI_Fee_GlobalVariables[u8EEPIndex].Fee_u16JobResult = static_u16JobResult;
+                TI_Fee_GlobalVariables[u8EEPIndex].Fee_ModuleState = static_ModuleState;
+                TI_Fee_oStatusWord[u8EEPIndex].Fee_StatusWordType_ST.Erase = 1U;
+		    }
 		}
 		u8EEPIndex++;
 	}

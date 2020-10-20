@@ -30,7 +30,7 @@
  * 01.12.00		  13Dec2013    Vishwanath Reddy     SDOCM00105412    Traceability tags added. 
  *                                                                   MISRA C fixes.
  * 01.13.00       30Dec2013	   Vishwanath Reddy     SDOCM00107976	 Check for Multi Bit error.*
- * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for Conqueror.
+ * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for TMS570LCx.
  * 01.16.00		  15Jul2014    Vishwanath Reddy 	SDOCM00112141    Remove  MISRA warnings.
  * 01.17.00		  15Oct2014    Vishwanath Reddy     SDOCM00113379    RAM Optimization changes.
  * 01.18.00		  12Oct2015    Vishwanath Reddy     SDOCM00119455    Update version history.
@@ -43,10 +43,11 @@
  * 01.19.01       12Augu2016   Vishwanath Reddy     SDOCM00122543    Update version history.
  * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    Update version history. 
  * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Update version history. 
+ * 01.19.04		  05Dec2017    Prathap Srinivasan   HERCULES_SW-5082 Update version history.
  *********************************************************************************************************************/
 
 /*
-* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
+* Copyright (C) 2009-2018 Texas Instruments Incorporated - www.ti.com  
 * 
 * 
 *  Redistribution and use in source and binary forms, with or without 

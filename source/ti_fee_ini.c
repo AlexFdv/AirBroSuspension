@@ -43,7 +43,7 @@
  *                                                                   and SDOCM00107622.     
  * 01.13.02       12Jun2014	   Vishwanath Reddy     0000000000000	 Updated version info for SDOCM00108238
  * 01.14.00		  26Mar2014    Vishwanath Reddy 	                 Update version info for SDOCM00107161.
- * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for Conqueror.
+ * 01.15.00		  06Jun2014    Vishwanath Reddy 	                 Support for TMS570LCx.
  * 01.16.00		  15Jul2014    Vishwanath Reddy 	SDOCM00112141    Remove  MISRA warnings.
  * 01.16.01		  12Sep2014	   Vishwanath Reddy     SDOCM00112930    Updated version information.
  *                                                                   New global variable TI_Fee_bEraseSuspended added.  
@@ -67,11 +67,12 @@
  * 01.19.02       25Janu2017   Vishwanath Reddy     SDOCM00122832    Update patch version TI_FEE_MINOR_VERSION.
  * 01.19.03       15May2017    Prathap Srinivasan   SDOCM00122917    Removed Block Size interpretation for Blocks that 
  *                                                                   are not Valid, Invalid or Empty.
+ * 01.19.04		  05Dec2017    Prathap Srinivasan   HERCULES_SW-5082 Update version history.
  *********************************************************************************************************************/
 /* Total Number of Requirements : FEE : 104 */ 
 
 /*
-* Copyright (C) 2009-2016 Texas Instruments Incorporated - www.ti.com  
+* Copyright (C) 2009-2018 Texas Instruments Incorporated - www.ti.com  
 * 
 * 
 *  Redistribution and use in source and binary forms, with or without 
@@ -130,7 +131,7 @@
 #if (TI_FEE_SW_MINOR_VERSION != 19U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_MINOR_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_MINOR_VERSION */
-#if (TI_FEE_SW_PATCH_VERSION != 3U)
+#if (TI_FEE_SW_PATCH_VERSION != 4U)
     #error TI_FEE_Cfg.c: TI_FEE_SW_PATCH_VERSION of TI_FEE.h is incompatible.
 #endif /* FEE_SW_PATCH_VERSION */
 
