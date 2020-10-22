@@ -34,14 +34,14 @@ inline void printTextLin(const portCHAR* text)
 inline void printNumberLin(const portLONG number)
 {
     char buff[10] = {'\0'};
-    ltoa(number, buff);
+    ltoa(number, buff, 10);
     printTextLin(buff);
 }
 
 inline void printNumber(const portLONG number)
 {
     char buff[10] = {'\0'};
-    ltoa(number, buff);
+    ltoa(number, buff, 10);
     printText(buff);
 }
 
