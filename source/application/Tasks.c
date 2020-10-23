@@ -403,7 +403,7 @@ static void vTimerCallbackFunction(xTimerHandle xTimer)
 }
 
 /*=================================================*/
-
+#define MAGIC_NUMBER 0xABCD
 static void vMemTask(void *pvParameters)
 {
     swiSwitchToMode(0x1F);
@@ -430,6 +430,11 @@ static void vMemTask(void *pvParameters)
     // update cached levels to actual values
     readLevels((void*) &cachedLevels);
     readSettings((void*) &cachedSettings);
+
+    if (cachedSettings.magic_number != MAGIC_NUMBER)
+    {
+        memClearHandler(NULL);
+    }
 
     Command cmd;
     for (;;)
@@ -945,7 +950,19 @@ static portSHORT levelsGetMaxHandler(Command *cmd)
 
 static portSHORT memClearHandler(Command *cmd)
 {
-    formatFEE();
+    //formatFEE(); //doesn't work
+
+    GLOBAL_SYNC_START;
+        memset(&cachedLevels, 0, sizeof(cachedLevels));
+        memset(&cachedSettings, 0, sizeof(cachedSettings));
+
+        cachedSettings.magic_number = MAGIC_NUMBER;
+
+        writeLevels((void*)&cachedLevels);
+        writeSettings((void*)&cachedSettings);
+    GLOBAL_SYNC_END;
+
+    printSuccess();
 
     return 0;
 }
