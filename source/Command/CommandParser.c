@@ -109,7 +109,7 @@ Command parseCommand(const portCHAR command[MAX_COMMAND_LEN])
     portSHORT i = 0;
     for (; i<ARRSIZE(commandsList); ++i)
     {
-        // TODO: Compare until ':'
+        // TODO: Compare until ':' or 0xD
         if (0 == strncmp(command+1, commandsList[i].cmdValue, commandsList[i].cmdLen)) //@todo: use strlen instead of commandsList[i].cmdLen?
         {
             parsedCommand.commandType = commandsList[i].cmdType;
