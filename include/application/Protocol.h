@@ -14,8 +14,8 @@
 
 enum error_codes
 {
-    UndefinedErrorCode = 0,
-    UnknownCommandErrorCode ,
+    UndefinedErrorCode = 1,
+    UnknownCommandErrorCode,
     WrongWheelSpecifiedErrorCode,
     WrongLevelSpecifiedErrorCode,
     QueueWheelLevelReadTimeoutErrorCode,
@@ -25,7 +25,7 @@ enum error_codes
     MemorySendQueueErrorCode,
     MemoryReceiveQueueErrorCode,
     CommandsQueueErrorCode,
-
+    WrongCommandParams,
 };
 
 bool protocol_init(void);

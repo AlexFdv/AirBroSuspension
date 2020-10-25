@@ -279,7 +279,7 @@ Settings* getSettings(void)
     return 0;
 }
 
-static void executeWheelLogic(WheelStatusStruct* wheelStatus)
+static int executeWheelLogic(WheelStatusStruct* wheelStatus)
 {
     /*
      * Check wheel level
@@ -293,9 +293,8 @@ static void executeWheelLogic(WheelStatusStruct* wheelStatus)
     if (!readFromQueueWithTimeout(&adcValuesQueues[wheelStatus->wheelNumber],
                                   &levelValue, 0))
     {
-        printError(QueueWheelLevelReadTimeoutErrorCode);
         wheelStatus->isWorking = false;
-        return;
+        return QueueWheelLevelReadTimeoutErrorCode;
     }
 
     boolean allowWheelUp = levelValue < cachedSettings.levels_values_max.wheels[wheelStatus->wheelNumber];
@@ -359,7 +358,10 @@ static void executeWheelLogic(WheelStatusStruct* wheelStatus)
                 - wheelStatus->startTime) / configTICK_RATE_HZ;
         wheelStatus->isWorking = elapsedTimeSec < wheelStatus->timeoutSec;
     }
+
+    return 0;
 }  // executeWheelLogic
+
 static void initializeWheelStatus(WheelStatusStruct* wheelStatus, Command* cmd)
 {
     wheelStatus->isWorking = true;
@@ -597,7 +599,7 @@ static void vWheelTask(void *pvParameters)
     const WHEEL_IDX wheelNumber = wheelPins.wheel;
     const Queue wheelQueue = wheelsCommandsQueues[wheelNumber];
 
-    void (*logicFunctionPointer)(
+    int (*logicFunctionPointer)(
             WheelStatusStruct* wheelStatus) = executeWheelLogic;
 
     WheelStatusStruct wheelStatus =
@@ -629,7 +631,9 @@ static void vWheelTask(void *pvParameters)
             }
         }
 
-        logicFunctionPointer(&wheelStatus);
+        int rc = logicFunctionPointer(&wheelStatus);
+        if (rc != 0)
+            printError(rc);
 
         switch (wheelStatus.cmdType)
         {
@@ -723,8 +727,7 @@ static void vCommandHandlerTask(void *pvParameters)
 
 static portSHORT unknownCommandHandler(Command *cmd)
 {
-    printError(UnknownCommandErrorCode);
-    return 0;
+    return UnknownCommandErrorCode;
 }
 
 /*
@@ -801,7 +804,7 @@ static portSHORT wheelCommandHandler(Command *cmd)
         }
         else
         {
-            printError(WrongWheelSpecifiedErrorCode);
+            return WrongWheelSpecifiedErrorCode;
         }
     }
     return 0;
@@ -948,21 +951,51 @@ static portSHORT levelsGetMaxHandler(Command *cmd)
     return 0;
 }
 
-static portSHORT memClearHandler(Command *cmd)
+static void setDefaults()
 {
-    //formatFEE(); //doesn't work
-
     GLOBAL_SYNC_START;
+        const AdcValue_t maxAdcValue =  getMaxADCValue();
         memset(&cachedLevels, 0, sizeof(cachedLevels));
-        memset(&cachedSettings, 0, sizeof(cachedSettings));
 
-        cachedSettings.magic_number = MAGIC_NUMBER;
+        portSHORT i = 0;
+        for (; i < WHEELS_COUNT; ++i)
+        {
+            cachedSettings.levels_values_min.wheels[i] = 0;
+            cachedSettings.levels_values_max.wheels[i] = maxAdcValue;
+        }
+        cachedSettings.compressor_preasure_min = 0;
+        cachedSettings.compressor_preasure_max = maxAdcValue;
 
         writeLevels((void*)&cachedLevels);
         writeSettings((void*)&cachedSettings);
     GLOBAL_SYNC_END;
+}
 
-    printSuccess();
+static portSHORT memClearHandler(Command *cmd)
+{
+    //formatFEE(); //doesn't work
+
+    if (cmd->argc == 0)
+    {
+        GLOBAL_SYNC_START;
+            memset(&cachedLevels, 0, sizeof(cachedLevels));
+            memset(&cachedSettings, 0, sizeof(cachedSettings));
+
+            cachedSettings.magic_number = MAGIC_NUMBER;
+
+            writeLevels((void*)&cachedLevels);
+            writeSettings((void*)&cachedSettings);
+        GLOBAL_SYNC_END;
+
+        printSuccess();
+    }
+    else if (cmd->argc == 1)
+    {
+        setDefaults();
+        printSuccessString("SetDefaults");
+    }
+    else
+        return WrongCommandParams;
 
     return 0;
 }
