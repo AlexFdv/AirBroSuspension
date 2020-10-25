@@ -13,7 +13,7 @@
 
 #define ADC_FIFO_SIZE 6
 
-typedef uint16 AdcValue_t;
+typedef uint16_t AdcValue_t;
 
 // uint16 is adcData_t->value type
 typedef struct AdcDataValues
@@ -57,5 +57,6 @@ typedef struct idx_value
 
 void initializeADC();
 void getADCDataValues(AdcDataValues* adcData);
+AdcValue_t getMaxADCValue();
 
 #endif /* _APS_ADCCONTROLLER_H_ */

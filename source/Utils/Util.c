@@ -33,6 +33,8 @@ char *err2str(int code)
         return "Timeout in receiving from the memory queue";
     case CommandsQueueErrorCode:
         return "Could not receive a value from the queue.";
+    case WrongCommandParams:
+        return "Wrong number of parameters";
     }
 
     return "Unknown error occurred";

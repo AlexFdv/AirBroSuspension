@@ -54,3 +54,8 @@ void getADCDataValues(AdcDataValues* adcData)
         }
     }
 }
+
+AdcValue_t getMaxADCValue()
+{
+    return (AdcValue_t)0xff;
+}
