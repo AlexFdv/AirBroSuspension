@@ -435,7 +435,7 @@ static void vMemTask(void *pvParameters)
 
     if (cachedSettings.magic_number != MAGIC_NUMBER)
     {
-        memClearHandler(NULL);
+        setDefaults();
     }
 
     Command cmd;
