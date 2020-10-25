@@ -51,6 +51,7 @@ static void vTimerCallbackFunction(xTimerHandle xTimer);
 
 extern portSHORT helpHandler(Command *cmd);
 
+static void setDefaults();
 /*=================================================*/
 #pragma SWI_ALIAS(swiSwitchToMode, 1)
 
@@ -58,7 +59,6 @@ extern portSHORT helpHandler(Command *cmd);
 extern void swiSwitchToMode(uint32 mode);
 
 /*=================================================*/
-
 
 /* ------------------------ Command Handlers ------------------------ */
 static portSHORT wheelAutoCommandHandler(Command *cmd);
