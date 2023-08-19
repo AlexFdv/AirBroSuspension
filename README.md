@@ -1,29 +1,30 @@
-<h1> Command format:
-#<command>:param1:param2:param3:param4
+# Command format:
+\#\<command\>:param1:param2:param3:param4
 
-<h1> Reply format:
-#OK:<value1>:<value2>:<value3>:<value4>
-#ERROR:<error_code>:<error_message>
+# Reply format:
+\#OK:\<value1\>:\<value2\>:\<value3\>:\<value4\>
 
-<h1>Command list for wheels:
+\#ERROR:\<error_code\>:\<error_message\>
+
+# Command list for wheels:
 
 up – up wheels
 
-up <wheel number> – up specific wheel
+up \<wheel number\> – up specific wheel
 
-up <wheel number> <level number> – up specific wheel to the level
+up \<wheel number\> \<level number\> – up specific wheel to the level
 
 down – the same as `up`, but `down`
 
 stop – stops the command execution
 
-auto <level number> <timeout seconds (optional)> – automatically `up` or `down` wheels depending on the target <level number> cell.
+auto \<level number\> \<timeout seconds (optional)\> – automatically `up` or `down` wheels depending on the target \<level number\> cell.
 
-<h1> Memory commands:
+# Memory commands:
 
-lsave <cell number> – saves the current level to the <cell number>. Max 3 cells can be used.
+lsave \<cell number\> – saves the current level to the \<cell number\>. Max 3 cells can be used.
 
-lget <cell number> – shows the current levels in <cell number>
+lget \<cell number\> – shows the current levels in \<cell number\>
 
 lmaxsave – saves the current level as `max` for all wheels. The controller tries to not exceed this level.
 
@@ -37,9 +38,9 @@ lshow – shows the current `real time` sensors values of wheels levels. These 
 
 memclear – clears the memory.
 
-memclear <param> – clears the memory and sets the <param> as a default value.
+memclear \<param\> – clears the memory and sets the \<param\> as a default value.
 
-<h1> Compressor commands:
+# Compressor commands:
 
 getcompr – displays the pressure in the compressor.
 
@@ -47,10 +48,10 @@ cminsave – saves the current pressure as minimum allowable before start pumpi
 
 cmaxsave – saves the current pressure value as maximum to turn off the compressor.
 
-<h1> Version commands
+# Version commands
 
 ver – returns the current version number
 
-<h1> Other commands
+# Other commands
 
 bat – shows the battery voltage.
